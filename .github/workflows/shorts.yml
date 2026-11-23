@@ -29,6 +29,7 @@ defaults:
 env:
   TZ: Asia/Kolkata
   FACELESS_HOME: ${{ github.workspace }}/.cache/faceless
+  HF_HOME: ${{ github.workspace }}/.cache/faceless/hf
   SOFTWARE_GL: '1'
   QS: '&res=0.6&aa=0&shadow=1024'
   FPS: '24'
