@@ -1,0 +1,151 @@
+name: TaleDrop daily shorts (YouTube + Instagram)
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # 12:00 Asia/Kolkata
+    - cron: '30 12 * * *'  # 18:00 Asia/Kolkata
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Which style to generate'
+        required: true
+        default: deep-dive
+        type: choice
+        options:
+          - deep-dive
+          - stick-story
+
+permissions:
+  contents: write
+
+concurrency:
+  group: taledrop-shorts
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TZ: Asia/Kolkata
+  FACELESS_HOME: ${{ github.workspace }}/.cache/faceless
+  SOFTWARE_GL: '1'
+  QS: '&res=0.6&aa=0&shadow=1024'
+  FPS: '24'
+
+jobs:
+  short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          install-chromedriver: false
+
+      - name: Cache voice and whisper models
+        uses: actions/cache@v4
+        with:
+          path: .cache/faceless
+          key: faceless-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: faceless-${{ runner.os }}-
+
+      - name: Install Python and OpenCode CLI
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          npm install -g @opencode/cli@latest
+          opencode --version
+          ffmpeg -version | head -n 1
+          "${{ steps.chrome.outputs.chrome-path }}" --version
+
+      - name: Prepare model environment
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          bash .opencode/skills/faceless-shorts/scripts/setup.sh
+
+      - name: Pick mode and slug
+        id: prep
+        run: |
+          mkdir -p work state
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODE="${{ inputs.mode }}"
+          elif [ "${{ github.event.schedule }}" = "30 6 * * *" ]; then
+            MODE="deep-dive"
+          else
+            MODE="stick-story"
+          fi
+          SLUG="${MODE}-$(date -u +%Y%m%d-%H%M)"
+          jq -n --arg slug "$SLUG" --arg mode "$MODE" '{slug:$slug,mode:$mode}' > state/current.json
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+          echo "Mode: $MODE | Slug: $SLUG"
+
+      - name: Generate sourced script and shots
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENCODE_GO_API_KEY: ${{ secrets.LLM_API_KEY }}
+          CI: 'true'
+        run: |
+          opencode run "$(cat scripts/prompt-${{ steps.prep.outputs.mode }}.md)"
+
+      - name: Build, verify and publish
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+        run: |
+          bash scripts/build_short.sh "${{ steps.prep.outputs.slug }}" "${{ steps.prep.outputs.mode }}"
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ steps.prep.outputs.slug }}
+          path: |
+            work/${{ steps.prep.outputs.slug }}/renders/*.mp4
+            work/${{ steps.prep.outputs.slug }}/review/all.jpg
+            work/${{ steps.prep.outputs.slug }}/review/cover.jpg
+            work/${{ steps.prep.outputs.slug }}/check.log
+            work/${{ steps.prep.outputs.slug }}/audio.log
+            work/${{ steps.prep.outputs.slug }}/publish.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Commit state and log
+        if: always()
+        run: |
+          git config user.name "taledrop-bot"
+          git config user.email "taledrop-bot@users.noreply.github.com"
+          git add state AUTO_LOG.md
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "Automated short ${{ steps.prep.outputs.slug }}"
+            git push
+          fi
