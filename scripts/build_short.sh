@@ -42,11 +42,12 @@ node tools/capture.mjs video "renders/$SLUG.mp4"
 echo "== verify MP4 =="
 MP4="renders/$SLUG.mp4"
 [ -s "$MP4" ] || { echo "empty MP4" >&2; exit 5; }
-DUR="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$MP4")"
-W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$MP4")"
-H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$MP4")"
-VCODEC="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "$MP4")"
-ACODEC="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$MP4")"
+clean_probe() { tr -d ',\r\n'; }
+DUR="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$MP4" | clean_probe)"
+W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$MP4" | clean_probe)"
+H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$MP4" | clean_probe)"
+VCODEC="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "$MP4" | clean_probe)"
+ACODEC="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$MP4" | clean_probe)"
 python3 - "$DUR" "$W" "$H" "$VCODEC" "$ACODEC" <<'PY'
 import sys
 dur, w, h, vcodec, acodec = sys.argv[1:6]
