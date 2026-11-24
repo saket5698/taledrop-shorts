@@ -6,5 +6,18 @@
     "youtube_url": "https://www.youtube.com/watch?v=_A7zLWK6VXE",
     "instagram_url": "https://www.instagram.com/reel/DgHwnwFBbdV/",
     "published_at": "2026-11-24T10:37:50Z"
+  },
+  {
+    "date": "2026-11-24T16:48:13.423620+05:30",
+    "slug": "stick-story-20261124-1056",
+    "mode": "stick-story",
+    "title": "Tornado Coming? Get Away From Windows - Your Life Depends On It",
+    "youtube_url": "https://www.youtube.com/watch?v=Tvl_U2M8R-0",
+    "instagram_url": null,
+    "sources": [
+      "National Weather Service, \"Tornado Safety\" (supports staying away from windows, going to a lowest interior level, covering the head and neck, and avoiding bridges) https://www.weather.gov/safety/tornado",
+      "FEMA / Ready.gov, \"Tornadoes\" (supports a windowless interior room, staying in the car with a seatbelt, and ducking below the windows) https://www.ready.gov/tornadoes"
+    ],
+    "status": "youtube uploaded; instagram pending"
   }
 ]
