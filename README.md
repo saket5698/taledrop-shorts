@@ -45,6 +45,8 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 
 If you skip R2, the workflow uses `uguu.se` (public, ~3 hour expiry). The MP4 itself is only on a temp host; YouTube/Instagram copy it during upload.
 
+The configured writer needs an active **OpenCode Go** subscription (currently $10/month) because the repo selects `opencode-go/glm-5.3-flash`. Rendering, hosting, and uploading themselves still cost nothing. If you prefer a different provider, change `model` in `.opencode/opencode.json` and the matching credential env in `.github/workflows/shorts.yml`.
+
 ### 3. YouTube credentials
 
 In Google Cloud Console, enable **YouTube Data API v3**, create an **OAuth client ID** of type *Desktop app*, download `client_secret.json`, then run on your own machine:
