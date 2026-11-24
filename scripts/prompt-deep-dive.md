@@ -15,6 +15,7 @@ STEPS
 5. Write the three files below. Then stop immediately.
 
 `work/<slug>/script.json` — valid JSON with exactly these keys:
+- All numeric fields MUST be JSON numbers, never strings (for example `0.35`, not `"0.35"`).
 - `title`: unique hook-style title, max 100 chars.
 - `voice`: `am_michael`
 - `speed`: `1.05`

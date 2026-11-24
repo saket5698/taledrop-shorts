@@ -74,7 +74,7 @@ def main():
     if not a.project: ap.error('project folder missing')
     from kokoro_onnx import Kokoro
     P = Path(a.project); S = json.loads((P / 'script.json').read_text())
-    voice = a.voice or S.get('voice', 'am_michael'); speed = a.speed or S.get('speed', 1.0)
+    voice = a.voice or S.get('voice', 'am_michael'); speed = float(a.speed or S.get('speed', 1.0))
     k = Kokoro(str(KDIR / 'kokoro-v1.0.onnx'), str(KDIR / 'voices-v1.0.bin'))
     lang = 'en-gb' if voice.startswith('b') else 'en-us'
     say = lambda text: trim(np.asarray(k.create(text, voice=voice, speed=speed, lang=lang)[0], dtype=np.float64))
@@ -83,7 +83,7 @@ def main():
     for i, ln in enumerate(S['lines']):
         cur.append(i)
         if re.search(r'[.?!]["\')]*$', ln['text'].strip()) or ln.get('break') or i == len(S['lines']) - 1: groups.append(cur); cur = []
-    out = [np.zeros(int(S.get('lead', 0.4) * SR))]; t = len(out[0]) / SR; lines = [None] * len(S['lines'])
+    out = [np.zeros(int(float(S.get('lead', 0.4)) * SR))]; t = len(out[0]) / SR; lines = [None] * len(S['lines'])
     for g in groups:
         x = say(' '.join(S['lines'][i]['text'] for i in g))
         cuts = [0.0]

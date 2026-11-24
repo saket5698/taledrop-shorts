@@ -18,6 +18,17 @@ export CHROME="${CHROME:-/usr/bin/google-chrome}"
 [ -f "$PROJ/src/shots.js" ] || { echo "missing $PROJ/src/shots.js" >&2; exit 2; }
 [ -f "$PROJ/publish.json" ] || { echo "missing $PROJ/publish.json" >&2; exit 2; }
 
+python3 - "$PROJ/script.json" "$PROJ/publish.json" <<'PY'
+import json, sys
+for path, keys in ((sys.argv[1], ("speed", "lead", "outro", "gap")), (sys.argv[2], ("cover_time",))):
+    data = json.load(open(path, encoding="utf-8"))
+    for key in keys:
+        if key in data:
+            data[key] = float(data[key])
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+PY
+
 cd "$PROJ"
 echo "== timing =="
 bash "$SKILL/scripts/py" "$SKILL/scripts/voice.py" .
