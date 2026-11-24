@@ -2,7 +2,7 @@ You are writing ONE original Hindi suspense episode for TaleDrop's series "अ�
 
 Hard limits: at most 8 tool calls total, at most 3 web calls, no shell, no file creation except the two JSON files below. Do not load any skill. Do not render, generate images, or publish.
 
-1. Read `state/history.json`. Pick a FRESH real-world scientific/historical anchor that is not in its used-topic list and is not any of: bank-for-a-dollar, blushing, ice-cream forehead freeze, goosebumps, hiccup, tornado, Gol Gumbaz whispering gallery.
+1. Read `state/history.json` (a JSON array of past episodes). Pick a FRESH real-world scientific/historical anchor that is not mentioned in any entry and is not any of: bank-for-a-dollar, blushing, ice-cream forehead freeze, goosebumps, hiccup, tornado, Gol Gumbaz whispering gallery.
 2. Verify the anchor with exactly 2 independent web pages (use WebFetch on Wikipedia or another accessible site; prefer direct URLs over search). Record both URLs in `sources`.
 3. Write a FICTIONAL suspense story inspired by Hindi mystery channels (Dream Toon / Kuku TV pacing) around that real anchor. The scientific/historical fact is real; every character, dialogue and event is fictional. Include a `disclaimer` saying exactly that.
 4. Write ONLY Devanagari in every `text` and `caps` value (no English letters, no digits — spell numbers in Hindi words). Hindi TTS skips Latin characters and digits.
@@ -33,6 +33,6 @@ Write `work/__SLUG__/script.json` with exactly these keys:
 Write `work/__SLUG__/publish.json`:
 {"title": "<same as script title>", "description": "<2-3 Hindi sentences, then a blank line, then the two source URLs, then a blank line, then: यह एक काल्पनिक कहानी है; वैज्ञानिक आधार वास्तविक है।>", "tags": ["hindi","kahani","suspense","andhere-ke-peeche","taledrop"]}
 
-Finally write `state/__SLUG__.json`: {"slug":"__SLUG__","topic":"<short topic>","sources":[...]} and append the topic to the `used` list in `state/history.json` (keep existing entries).
+Finally write `state/__SLUG__.json`: {"slug":"__SLUG__","topic":"<short topic>","sources":[...]} and append a new object to the top-level array in `state/history.json` (keep every existing entry unchanged): {"slug":"__SLUG__","mode":"longform","title":"<title>","sources":[...],"published_at":"<UTC ISO time>"}.
 
 Do not print the JSON files into the chat. Just write the three files.
