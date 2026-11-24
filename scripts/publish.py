@@ -29,6 +29,7 @@ STATE = ROOT / "state"
 HISTORY = STATE / "history.json"
 LOG = ROOT / "AUTO_LOG.md"
 IG_API = "https://graph.facebook.com/v21.0"
+IG_APP_ID = os.environ.get("IG_APP_ID") or "2412489276182320"
 YT_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"]
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -37,6 +38,12 @@ TAG_BLOCK = ["truestory", "shorts", "facts", "storytime", "didyouknow", "viral",
 
 def fail(msg):
     raise RuntimeError(msg)
+
+
+def ig_params(extra):
+    params = dict(extra)
+    params.setdefault("app_id", IG_APP_ID)
+    return params
 
 
 def api_error(resp, what):
@@ -223,9 +230,15 @@ def yt_upload(youtube, mp4: Path, cover: Path, title, description, tags):
 def ig_existing(session, ig_user, title, caption):
     r = session.get(
         f"{IG_API}/{ig_user}/media",
-        params={"fields": "id,caption,timestamp,permalink", "limit": "25"},
+        params=ig_params({"fields": "id,caption,timestamp,permalink", "limit": "25"}),
         timeout=45,
     )
+    if r.status_code == 403:
+        print(
+            "WARNING: Instagram media list unavailable (403); using local history for duplicate checks",
+            file=sys.stderr,
+        )
+        return None
     if not r.ok:
         api_error(r, "Instagram media list")
     for item in r.json().get("data", []):
@@ -238,7 +251,7 @@ def ig_existing(session, ig_user, title, caption):
 def ig_publish(session, ig_user, video_url, title, caption):
     r = session.post(
         f"{IG_API}/{ig_user}/media",
-        params={"media_type": "REELS", "video_url": video_url, "caption": caption},
+        params=ig_params({"media_type": "REELS", "video_url": video_url, "caption": caption}),
         timeout=90,
     )
     if not r.ok:
@@ -251,7 +264,7 @@ def ig_publish(session, ig_user, video_url, title, caption):
     for attempt in range(20):
         q = session.get(
             f"{IG_API}/{container}",
-            params={"fields": "id,status,status_code"},
+            params=ig_params({"fields": "id,status,status_code"}),
             timeout=45,
         )
         if not q.ok:
@@ -269,7 +282,7 @@ def ig_publish(session, ig_user, video_url, title, caption):
 
     p = session.post(
         f"{IG_API}/{ig_user}/media_publish",
-        params={"creation_id": container},
+        params=ig_params({"creation_id": container}),
         timeout=90,
     )
     if not p.ok:
@@ -280,7 +293,7 @@ def ig_publish(session, ig_user, video_url, title, caption):
 
     v = session.get(
         f"{IG_API}/{media_id}",
-        params={"fields": "id,caption,media_type,timestamp,permalink"},
+        params=ig_params({"fields": "id,caption,media_type,timestamp,permalink"}),
         timeout=45,
     )
     if not v.ok:
