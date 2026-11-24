@@ -31,7 +31,7 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 
 | Secret | Required | How to get it |
 |---|---|---|
-| `LLM_API_KEY` | Yes | An **OpenCode Go** API key from <https://opencode.ai/console>. The workflow passes it to OpenCode as `OPENCODE_API_KEY` (and `OPENCODE_GO_API_KEY` for compatibility). The repo config selects the built-in `opencode-go/glm-5.3-flash` model. |
+| `LLM_API_KEY` | Yes | A **free OpenCode Console** API key from <https://opencode.ai/console> (no subscription needed). The workflow passes it as `OPENCODE_API_KEY`. The repo config selects the free `opencode/deepseek-v4.1-flash-free` model. |
 | `YOUTUBE_CLIENT_ID` | Yes | From `scripts/youtube_auth.py` (below). |
 | `YOUTUBE_CLIENT_SECRET` | Yes | From `scripts/youtube_auth.py`. |
 | `YOUTUBE_REFRESH_TOKEN` | Yes | From `scripts/youtube_auth.py`. |
@@ -45,7 +45,7 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 
 If you skip R2, the workflow uses `uguu.se` (public, ~3 hour expiry). The MP4 itself is only on a temp host; YouTube/Instagram copy it during upload.
 
-The configured writer needs an active **OpenCode Go** subscription (currently $10/month) because the repo selects `opencode-go/glm-5.3-flash`. Rendering, hosting, and uploading themselves still cost nothing. If you prefer a different provider, change `model` in `.opencode/opencode.json` and the matching credential env in `.github/workflows/shorts.yml`.
+The configured writer uses a **free** OpenCode model, so no subscription is required. It has daily request limits, which are plenty for two shorts per day. Rendering, hosting, and uploading are also $0. If you later want a stronger model, change `model` in `.opencode/opencode.json` and the matching credential env in `.github/workflows/shorts.yml`.
 
 ### 3. YouTube credentials
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode-go/glm-5.3-flash",
+  "model": "opencode/deepseek-v4.1-flash-free",
   "update": "disable",
   "share": "disabled",
   "automations": false,
