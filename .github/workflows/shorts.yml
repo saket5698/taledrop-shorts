@@ -68,6 +68,8 @@ jobs:
 
       - name: Install Python and OpenCode CLI
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           npm install -g @opencode/cli@latest
