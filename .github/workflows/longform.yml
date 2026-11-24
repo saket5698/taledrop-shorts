@@ -1,0 +1,148 @@
+name: TaleDrop daily Hindi long-form (YouTube 7 PM IST)
+
+on:
+  schedule:
+    - cron: '30 13 * * *'   # 19:00 Asia/Kolkata
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: taledrop-longform
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TZ: Asia/Kolkata
+  FACELESS_HOME: ${{ github.workspace }}/.cache/faceless
+  SOFTWARE_GL: '1'
+  QS: '&res=0.7&aa=0&shadow=1024'
+  FPS: '20'
+
+jobs:
+  episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          install-chromedriver: false
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache/faceless
+          key: longform-voice-${{ runner.os }}-v1
+          restore-keys: longform-voice-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          npm install -g @opencode/cli@latest
+          ffmpeg -version | head -n 1
+          "${{ steps.chrome.outputs.chrome-path }}" --version
+
+      - name: Verify YouTube API access
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          r = requests.post('https://oauth2.googleapis.com/token', data={
+              'client_id': os.environ['YOUTUBE_CLIENT_ID'],
+              'client_secret': os.environ['YOUTUBE_CLIENT_SECRET'],
+              'refresh_token': os.environ['YOUTUBE_REFRESH_TOKEN'],
+              'grant_type': 'refresh_token'}, timeout=20)
+          r.raise_for_status()
+          c = requests.get('https://www.googleapis.com/youtube/v3/channels', params={'part':'id','mine':'true'},
+                           headers={'Authorization':'Bearer '+r.json()['access_token']}, timeout=20)
+          c.raise_for_status()
+          print('YouTube Data API OK')
+          PY
+
+      - name: Prepare slug
+        id: prep
+        run: |
+          mkdir -p work state
+          SLUG="hindi-$(date -u +%Y%m%d)"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+          echo "Long-form slug: $SLUG"
+
+      - name: Write bounded sourced Hindi script
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.LLM_API_KEY }}
+          CI: 'true'
+        run: |
+          sed "s|__SLUG__|${{ steps.prep.outputs.slug }}|g" scripts/prompt-longform.md > /tmp/longform-prompt.md
+          timeout --signal=TERM --kill-after=30s 12m \
+            opencode run --model opencode/hy4-flash-free "$(cat /tmp/longform-prompt.md)"
+
+      - name: Verify writer output
+        run: |
+          P="work/${{ steps.prep.outputs.slug }}"
+          [ -s "$P/script.json" ] || { echo "no script.json" >&2; exit 2; }
+          [ -s "$P/publish.json" ] || { echo "no publish.json" >&2; exit 2; }
+          python - "$P" <<'PY'
+          import json, sys, pathlib
+          p = pathlib.Path(sys.argv[1])
+          s = json.loads((p/'script.json').read_text(encoding='utf-8'))
+          pub = json.loads((p/'publish.json').read_text(encoding='utf-8'))
+          n = len(s['lines'])
+          assert 150 <= n <= 190, f'line count {n}'
+          assert len(s['chapters']) == n and len(s['visual_labels']) == n
+          assert len(s['sources']) == 2
+          assert pub['title'] == s['title']
+          print(f'validated {n} lines, {len(s["sources"])} sources')
+          PY
+
+      - name: Build and publish
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: bash scripts/build_longform.sh "${{ steps.prep.outputs.slug }}"
+
+      - name: Upload QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: longform-${{ steps.prep.outputs.slug }}
+          path: |
+            work/${{ steps.prep.outputs.slug }}/renders/*.mp4
+            work/${{ steps.prep.outputs.slug }}/script.json
+            work/${{ steps.prep.outputs.slug }}/publish.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Commit state and log
+        if: always()
+        run: |
+          git config user.name "taledrop-bot"
+          git config user.email "taledrop-bot@users.noreply.github.com"
+          git add state LONG_FORM_LOG.md
+          if git diff --cached --quiet; then echo "No state changes"; else
+            git commit -m "Automated Hindi long-form ${{ steps.prep.outputs.slug }}"
+            git push
+          fi

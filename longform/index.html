@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="hi"><head><meta charset="utf-8">
+<title>अंधेरे के पीछे</title>
+<style>
+ @font-face{font-family:'Noto Devanagari';src:url('fonts/NotoSansDevanagari-Bold.ttf') format('truetype');font-weight:700 900}
+ html,body{margin:0;background:#000;overflow:hidden}
+ #stage{position:relative;width:1080px;height:1920px}
+ canvas{display:block;width:1080px;height:1920px}
+ #play{position:absolute;left:40px;top:40px;z-index:2;padding:14px 22px;font:700 28px sans-serif;background:#e8b04b;color:#0b0d16;border:0;border-radius:8px;cursor:pointer}
+</style></head><body><div id="stage">
+<canvas id="cv" width="1080" height="1920"></canvas>
+<button id="play" hidden>▶ PLAY</button></div>
+<script type="module" src="main.js"></script></body></html>
