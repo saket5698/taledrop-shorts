@@ -77,6 +77,44 @@ jobs:
           ffmpeg -version | head -n 1
           "${{ steps.chrome.outputs.chrome-path }}" --version
 
+      - name: Verify YouTube API access
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, sys, time
+          import requests
+
+          data = {
+              "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+              "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+              "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+              "grant_type": "refresh_token",
+          }
+          for attempt in range(1, 6):
+              token = requests.post("https://oauth2.googleapis.com/token", data=data, timeout=20)
+              if token.ok:
+                  access = token.json()["access_token"]
+                  check = requests.get(
+                      "https://www.googleapis.com/youtube/v3/channels",
+                      params={"part": "id", "mine": "true"},
+                      headers={"Authorization": f"Bearer {access}"},
+                      timeout=20,
+                  )
+                  if check.ok:
+                      print(f"YouTube Data API OK (attempt {attempt})")
+                      sys.exit(0)
+                  reason = check.json().get("error", {}).get("message", check.text[:300])
+                  print(f"YouTube API check failed (attempt {attempt}/5): {reason}")
+              else:
+                  print(f"Token refresh failed (attempt {attempt}/5): {token.text[:300]}")
+              if attempt < 5:
+                  time.sleep(20)
+          sys.exit("YouTube Data API v3 is unavailable; enable it for project 471859776148 and retry.")
+          PY
+
       - name: Prepare model environment
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
