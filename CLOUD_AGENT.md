@@ -1,31 +1,30 @@
 # Cloud agent rules — TaleDrop
 
-You are an unattended GitHub Actions job. There is no user to ask and no approval step. Follow the prompt in the run.
+You are a small, bounded, unattended GitHub Actions writer. There is no user to ask and no approval step. The workflow has already created the project; another deterministic step will generate `src/shots.js`. Your only job is to write three JSON files, then stop.
 
 ## Hard rules
-- Never call the `question` tool. Decide and continue.
+- Use at most 8 tool calls. Stop immediately after the three output files are written.
+- Never call `question`. Decide and continue.
+- Never load the `faceless-shorts` skill. Never read `STYLE.md`. Never open or edit `src/shots.js` or anything under `src/`, `tools/`, `data/`, `review/`, or `renders/`.
+- Never run a shell command. No `new_video.sh`, `capture.mjs`, `voice.py`, `words.py`, `mix.py`, `ffmpeg`, git, or upload calls.
+- Never render, capture frames, read images, host, or upload. The CI steps after your turn do all of that.
 - Never modify `.github/`, `.opencode/opencode.json`, `scripts/`, `CLOUD_AGENT.md`, or `README.md`.
-- Write only inside `work/<slug>/` and `state/<slug>.json`.
-- Use the `faceless-shorts` skill. Read the relevant style's `STYLE.md` in full before writing.
-- Verify at least two reliable sources with webfetch/websearch. Put the URLs and a one-line note about what each supports in `script.json` → `sources`. If you cannot verify, choose a different topic. Do not invent sources.
+- Read only `state/current.json`, `AUTO_LOG.md`, and the `title` fields of `state/*.json`. Do not read full state files.
+- Use at most 4 webfetch/websearch calls to verify two reliable sources. If verification fails, choose another topic. Record full `https://` URLs.
 - Write original narration. Never copy another creator's script, captions, or shot list.
-- The hook must land in the first 2 seconds. Captions are one to three words with exactly one yellow word.
-- Do not use AI image or video generation. No paid APIs, no credits, no uploads directly from you.
-- The shell/Python steps after your turn do the timing, render, QA checks, hosting, and publishing. Do not run `capture.mjs video`, `voice.py`, `words.py`, `mix.py`, or any upload call yourself.
+- The hook must land in the first 2 seconds. Captions are 1–3 words with exactly one yellow word (prefix it with `*`).
+- Use the exact `slug` and `mode` from `state/current.json`. Never pick your own slug.
+- No AI image or video generation. No paid APIs, no credits.
 
 ## Required output files
 
 ### `work/<slug>/script.json`
-Use the skill's schema. Include:
-- `title`: a unique hook-style title, maximum 100 characters.
-- `voice`: `am_michael`
-- `speed`: `1.05`
-- `lead`, `outro`, `gap`, `music`: follow the style example.
-- `lines`: 90–110 words total, one object per cut, each with `text` and `caps` (`chunk | chunk` format).
-- `sources`: array of strings, each containing a title, publisher, and full `https://` URL.
-
-### `work/<slug>/src/shots.js`
-Rewrite the example shots for this exact script. Use `cut(i)` and word-timed reveals. Reuse the style kit; add small components in the same visual language if needed.
+Use the style values from the prompt. Include:
+- `title`: unique hook-style title, maximum 100 characters.
+- `voice`, `speed`, `lead`, `outro`, `gap`, `music`: exactly as specified in the prompt.
+- `sources`: exactly 2 strings, each with publisher, title, what it supports, and a full `https://` URL.
+- `visual_labels`: exactly 10 labels for `deep-dive` or 12 for `stick-story`, uppercase, max 14 chars, one per line in the same order as `lines`. The deterministic shot generator injects these into the visual template.
+- `lines`: exactly 10 (`deep-dive`) or 12 (`stick-story`) objects, 90–110 words total, each with `text` and `caps` (`chunk | chunk` format).
 
 ### `work/<slug>/publish.json`
 Write valid JSON with exactly these keys:
@@ -50,5 +49,3 @@ Write:
   "sources": ["<url>", "<url>"]
 }
 ```
-
-Read `state/current.json` first; it contains the exact `slug` and `mode` for this run. Never pick your own slug.

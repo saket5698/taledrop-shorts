@@ -37,7 +37,7 @@ env:
 jobs:
   short:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -100,13 +100,34 @@ jobs:
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
           echo "Mode: $MODE | Slug: $SLUG"
 
-      - name: Generate sourced script and shots
+      - name: Create project from style example
+        run: |
+          bash .opencode/skills/faceless-shorts/scripts/new_video.sh \
+            "${{ steps.prep.outputs.mode }}" "${{ steps.prep.outputs.slug }}" --dir work
+
+      - name: Write bounded sourced script
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           OPENCODE_API_KEY: ${{ secrets.LLM_API_KEY }}
           CI: 'true'
         run: |
-          opencode run "$(cat scripts/prompt-${{ steps.prep.outputs.mode }}.md)"
+          timeout --signal=TERM --kill-after=30s 8m \
+            opencode run --model opencode/hy4-flash-free \
+            "$(cat scripts/prompt-${{ steps.prep.outputs.mode }}.md)"
+
+      - name: Verify writer output
+        run: |
+          PROJ="work/${{ steps.prep.outputs.slug }}"
+          [ -s "$PROJ/script.json" ] || { echo "writer did not create script.json" >&2; exit 2; }
+          [ -s "$PROJ/publish.json" ] || { echo "writer did not create publish.json" >&2; exit 2; }
+          [ -s "state/${{ steps.prep.outputs.slug }}.json" ] || { echo "writer did not create state file" >&2; exit 2; }
+          python3 -c 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8")); json.load(open(sys.argv[2],encoding="utf-8")); json.load(open(sys.argv[3],encoding="utf-8"))' \
+            "$PROJ/script.json" "$PROJ/publish.json" "state/${{ steps.prep.outputs.slug }}.json"
+
+      - name: Generate deterministic shots
+        run: |
+          python3 scripts/generate_shots.py \
+            "work/${{ steps.prep.outputs.slug }}" "${{ steps.prep.outputs.mode }}"
 
       - name: Build, verify and publish
         env:
