@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-EXPECTED = {"deep-dive": 10, "stick-story": 12}
+EXPECTED = {"deep-dive": 10, "dark-mythology-history": 10, "stick-story": 12}
 
 
 def fail(msg):
@@ -14,7 +14,7 @@ def fail(msg):
 
 def main():
     if len(sys.argv) != 3:
-        fail("usage: generate_shots.py <project-dir> <deep-dive|stick-story>")
+        fail("usage: generate_shots.py <project-dir> <deep-dive|dark-mythology-history|stick-story>")
     project = Path(sys.argv[1]).resolve()
     mode = sys.argv[2]
     if mode not in EXPECTED:

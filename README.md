@@ -6,10 +6,10 @@ Unattended daily YouTube Shorts + Instagram Reels. GitHub Actions generates a fr
 
 | UTC | Asia/Kolkata | Output |
 |---|---|---|
-| 06:30 | 12:00 | Deep Dive 3D explainer |
+| 06:30 | 12:00 | Dark Mythology History (myths and old records, 10 lines) |
 | 12:30 | 18:00 | Stick-figure survival story |
 
-The workflow is queued, not overlapping (`concurrency` group). If a run fails, it logs the reason and the next slot tries a fresh topic.
+Manual runs can pick `deep-dive`, `dark-mythology-history` or `stick-story`; the two cron slots stay as above (18:00 is still stick-story). The workflow is queued, not overlapping (`concurrency` group). If a run fails, it logs the reason and the next slot tries a fresh topic.
 
 ## One-time setup
 
@@ -63,7 +63,7 @@ Use the Meta Graph API with `instagram_content_publish` and `pages_manage_posts`
 
 ### 5. Test before trusting the schedule
 
-In GitHub, open **Actions → TaleDrop daily shorts → Run workflow** and pick `deep-dive`. Watch the job. On success you will see:
+In GitHub, open **Actions → TaleDrop daily shorts → Run workflow** and pick `dark-mythology-history` (or `deep-dive` / `stick-story` for a manual run). Watch the job. On success you will see:
 
 - a YouTube URL in the job log
 - an Instagram Reel permalink in the job log
@@ -78,7 +78,7 @@ Only after a successful manual test will the cron slots be reliable.
 - `.opencode/opencode.json` — cloud model, permissions, no questions/automations.
 - `.opencode/skills/faceless-shorts/` — the complete renderer skill, copied locally.
 - `CLOUD_AGENT.md` — hard rules for the script-writing agent.
-- `scripts/prompt-*.md` — the two mode prompts.
+- `scripts/prompt-*.md` — the three mode prompts (`deep-dive`, `dark-mythology-history`, `stick-story`).
 - `scripts/build_short.sh` — timing, checks, audio, render, MP4 verification, cover.
 - `scripts/publish.py` — duplicate checks, hosting, YouTube upload, Instagram Reel publish, logging.
 - `state/history.json` — published-video memory used to avoid reposts on retries.

@@ -23,8 +23,8 @@ Use the style values from the prompt. Include:
 - `title`: unique hook-style title, maximum 100 characters.
 - `voice`, `speed`, `lead`, `outro`, `gap`, `music`: exactly as specified in the prompt.
 - `sources`: exactly 2 strings, each with publisher, title, what it supports, and a full `https://` URL.
-- `visual_labels`: exactly 10 labels for `deep-dive` or 12 for `stick-story`, uppercase, max 14 chars, one per line in the same order as `lines`. The deterministic shot generator injects these into the visual template.
-- `lines`: exactly 10 (`deep-dive`) or 12 (`stick-story`) objects, 90–110 words total, each with `text` and `caps` (`chunk | chunk` format).
+- `visual_labels`: exactly 10 labels for `deep-dive` or `dark-mythology-history`, or 12 for `stick-story`, uppercase, max 14 chars, one per line in the same order as `lines`. The deterministic shot generator injects these into the visual template.
+- `lines`: exactly 10 (`deep-dive`, `dark-mythology-history`) or 12 (`stick-story`) objects, 90–110 words total, each with `text` and `caps` (`chunk | chunk` format).
 
 ### `work/<slug>/publish.json`
 Write valid JSON with exactly these keys:
@@ -44,7 +44,7 @@ Write:
 ```json
 {
   "slug": "<slug>",
-  "mode": "deep-dive or stick-story",
+  "mode": "deep-dive, dark-mythology-history or stick-story",
   "title": "<title>",
   "sources": ["<url>", "<url>"]
 }

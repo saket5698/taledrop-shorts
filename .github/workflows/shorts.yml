@@ -13,6 +13,7 @@ on:
         type: choice
         options:
           - deep-dive
+          - dark-mythology-history
           - stick-story
 
 permissions:
@@ -128,7 +129,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODE="${{ inputs.mode }}"
           elif [ "${{ github.event.schedule }}" = "30 6 * * *" ]; then
-            MODE="deep-dive"
+            MODE="dark-mythology-history"
           else
             MODE="stick-story"
           fi

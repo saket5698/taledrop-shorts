@@ -10,6 +10,7 @@ word-synced captions, animation, sound effects and music, rendered to MP4. No AI
 4. **Stick Story**: stick-figure survival steps. Example: *What if the power went out for 3 days?*
 5. **Paper Atlas**: history in cut paper and maps. Example: *How one bakery burned down London*.
 6. **Tall Tale 3D**: funny true stories, flat 2D cartoon people in a sunny 3D world. Example: *The girl who was mailed to grandma*.
+7. **Dark Mythology History**: dark myths, old chronicles and historical mysteries as quiet one-light 3D places, one red-glowing subject, parchment maps, gold date ribbons and crimson case-file string, with typewriter captions. This is the TaleDrop cloud 12:00 slot.
 
 **How it works**
 script.json → Kokoro voice (local, free) → Whisper word timings (local, free) → shots drawn in code, each cut and caption
