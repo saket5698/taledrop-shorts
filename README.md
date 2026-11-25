@@ -37,6 +37,7 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 | `YOUTUBE_REFRESH_TOKEN` | Yes | From `scripts/youtube_auth.py`. |
 | `IG_ACCESS_TOKEN` | Yes | Long-lived Instagram Graph API token for the TaleDrop **Business** account. |
 | `IG_USER_ID` | Yes | Instagram user id, e.g. `17841471929026864`. |
+| `IG_APP_ID` | No | Meta app id that issued `IG_ACCESS_TOKEN`. Defaults to the TaleDrop app id in `publish.py`. |
 | `R2_ACCOUNT_ID` | No | Cloudflare R2. If all five R2 secrets are set, uploads use stable R2 URLs. |
 | `R2_ACCESS_KEY_ID` | No | Cloudflare R2. |
 | `R2_SECRET_ACCESS_KEY` | No | Cloudflare R2. |
@@ -89,3 +90,9 @@ Only after a successful manual test will the cron slots be reliable.
 - Two software renders per day can exceed the free Actions minutes of a private repo. Use a public repo or increase limits if needed.
 - The local OpenCode automations on the laptop were paused when this repo was prepared. Keep them paused once the cloud workflow is live, or you will get duplicate posts.
 - YouTube can upload the rendered file directly. Instagram needs a public video URL; that is why R2 (or a temp host) is part of the flow.
+
+## Troubleshooting Instagram
+
+`Instagram create media container failed (401)` or `API access blocked (code 200, subcode 5258005)` means Meta has blocked the **app** that issued `IG_ACCESS_TOKEN`, not the Instagram account. Do not just refresh the token from the same app; create a new Meta app (type *Business*), link the TaleDrop Facebook Page and Instagram Business account, then generate a long-lived token with `instagram_basic`, `instagram_content_publish`, `pages_show_list` and `business_management`. Update `IG_ACCESS_TOKEN`, `IG_USER_ID` and `IG_APP_ID`.
+
+After updating the secrets, run the **Instagram token check** workflow (`ig-check.yml`, manual dispatch) to confirm access before the next scheduled run. Instagram failures no longer fail the whole job: YouTube still publishes, and `AUTO_LOG.md` records `youtube published; instagram failed: <reason>`.

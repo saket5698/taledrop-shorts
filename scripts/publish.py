@@ -6,6 +6,7 @@ Deterministic, unattended, no approval prompts. Called by build_short.sh after t
 Required environment:
   YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
   IG_ACCESS_TOKEN, IG_USER_ID
+Optional: IG_APP_ID (defaults to the TaleDrop Meta app id)
 Optional (recommended for stable public video URLs):
   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_BASE_URL
 
@@ -34,6 +35,13 @@ YT_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.goog
 
 IST = timezone(timedelta(hours=5, minutes=30))
 TAG_BLOCK = ["truestory", "shorts", "facts", "storytime", "didyouknow", "viral", "animation", "taledrop"]
+
+IG_BLOCKED_HINT = (
+    "Instagram token diagnosis: the Meta app behind IG_ACCESS_TOKEN has API access blocked "
+    "(code 200 / subcode 5258005). Generate a fresh long-lived token from a Meta app with "
+    "instagram_basic + instagram_content_publish + pages_show_list + business_management, "
+    "then update IG_ACCESS_TOKEN, IG_USER_ID and IG_APP_ID."
+)
 
 
 def fail(msg):
@@ -368,14 +376,21 @@ def main():
         status = "youtube published; instagram skipped-missing-secrets"
     else:
         ig_user = os.environ["IG_USER_ID"]
-        duplicate_ig = ig_existing(session, ig_user, title, caption)
-        if duplicate_ig:
-            ig_url = duplicate_ig
-            status = "youtube published; instagram skipped-duplicate"
-        else:
-            if video_url is None:
-                video_url = host_video(mp4, slug, session)
-            media_id, ig_url = ig_publish(session, ig_user, video_url, title, caption)
+        try:
+            duplicate_ig = ig_existing(session, ig_user, title, caption)
+            if duplicate_ig:
+                ig_url = duplicate_ig
+                status = "youtube published; instagram skipped-duplicate"
+            else:
+                if video_url is None:
+                    video_url = host_video(mp4, slug, session)
+                media_id, ig_url = ig_publish(session, ig_user, video_url, title, caption)
+        except Exception as exc:
+            reason = str(exc).replace("\n", " ")[:300]
+            status = f"youtube published; instagram failed: {reason}"
+            print(f"WARNING: Instagram Reel failed, YouTube is still live: {reason}", file=sys.stderr)
+            if "API access blocked" in reason or '"code":200' in reason or "OAuthException" in reason:
+                print(IG_BLOCKED_HINT, file=sys.stderr)
 
     record(status)
     append_log(
