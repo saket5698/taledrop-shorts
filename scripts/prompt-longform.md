@@ -15,7 +15,7 @@ Write `work/__SLUG__/script.json` with exactly these keys:
   "slug": "__SLUG__",
   "language": "hi",
   "format": "longform-1080x1920",
-  "voice": "hi_piper",
+  "voice": "hi_edge_neural",
   "speed": 1.05,
   "lead": 0.35, "gap": 0.22, "outro": 0.9,
   "music": "tension",

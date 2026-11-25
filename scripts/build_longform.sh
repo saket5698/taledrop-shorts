@@ -14,10 +14,8 @@ cp -f "$TOOLS/tools/capture.mjs" "$TOOLS/tools/mix.py" "$PROJ/tools/"
 cp -f "$TOOLS/fonts/NotoSansDevanagari-Bold.ttf" "$PROJ/fonts/"
 cp -f "$TOOLS/make_cues.py" "$PROJ/"
 
-echo "==> Piper Hindi voice"
-export FACELESS_HOME="${FACELESS_HOME:-$ROOT/.cache/faceless}"
-"$PY" "$TOOLS/scripts/voice_piper_hi.py" --download
-"$PY" "$TOOLS/scripts/voice_piper_hi.py" "$PROJ"
+echo "==> Neural Hindi voices (male storyteller + female character)"
+"$PY" "$TOOLS/scripts/voice_edge_hi.py" "$PROJ"
 "$PY" - "$PROJ/data/lines.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1], encoding='utf-8'))

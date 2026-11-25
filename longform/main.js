@@ -43,38 +43,67 @@ function rr(x, y, w, h, r) {
 }
 function ellipse(x, y, rx, ry) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); }
 
-/** flat 2D character with breathing, blink, mouth and arm gesture */
+/** expressive flat 2D cartoon character — inspired by Hindi animated kahani style */
 function person(x, y, s, o) {
-  const t = o.t, ph = o.phase || 0, br = Math.sin(t * 2.1 + ph) * 0.018;
-  const blink = ((t * 0.9 + ph) % 4.2) < 0.13;
+  const t = o.t, ph = o.phase || 0, br = Math.sin(t * 2.1 + ph) * 0.022;
+  const blink = ((t * 0.92 + ph) % 4.2) < 0.14;
   const mouth = clamp(o.mouth || 0, 0, 1), turn = o.turn || 0;
+  const mood = o.mood || 'calm';
+  const coat = o.coat || PAL.cloth2, skin = o.skin || PAL.skin, hair = o.hair || '#1b2030';
   ctx.save(); ctx.translate(x, y); ctx.scale(s * (1 + br * 0.4), s * (1 + br));
-  // legs
+  // legs + shoes
   const step = o.walk ? Math.sin(t * 7 + ph) * 26 : 0;
-  ctx.save(); ctx.translate(-28, 0); ctx.rotate(step / 180); rr(-20, 0, 40, 200, 14); strokeFill(PAL.cloth); ctx.restore();
-  ctx.save(); ctx.translate(28, 0); ctx.rotate(-step / 180); rr(-20, 0, 40, 200, 14); strokeFill(PAL.cloth); ctx.restore();
-  // body
-  rr(-92, -300, 184, 320, 46); strokeFill(o.coat || PAL.cloth2);
-  // arm gesture
-  const arm = (o.gesture || 0) * Math.sin(t * 2.6 + ph) * 0.5;
-  ctx.save(); ctx.translate(86, -240); ctx.rotate(-0.3 + arm); rr(-18, 0, 36, 170, 16); strokeFill(o.coat || PAL.cloth2); ctx.restore();
-  ctx.save(); ctx.translate(-86, -240); ctx.rotate(0.3 - arm); rr(-18, 0, 36, 170, 16); strokeFill(o.coat || PAL.cloth2); ctx.restore();
-  // head
-  ctx.save(); ctx.translate(0, -420); ctx.rotate(turn);
-  ellipse(0, 0, 112, 126); strokeFill(o.skin || PAL.skin);
-  // hair / hood
-  ctx.beginPath(); ctx.arc(0, -18, 114, Math.PI * 1.04, Math.PI * 1.96); ctx.lineTo(100, -60); ctx.lineTo(-100, -60); ctx.closePath();
-  strokeFill(o.hair || '#1b2030');
-  // eyes
+  for (const side of [-1, 1]) {
+    ctx.save(); ctx.translate(side * 30, 0); ctx.rotate(side * step / 200);
+    rr(-21, 0, 42, 190, 16); strokeFill('#222a42');
+    rr(-30, 176, 60, 34, 14); strokeFill('#11151f'); ctx.restore();
+  }
+  // torso + collar
+  rr(-96, -310, 192, 330, 52); strokeFill(coat);
+  ctx.beginPath(); ctx.moveTo(-46, -306); ctx.lineTo(0, -246); ctx.lineTo(46, -306); ctx.closePath();
+  strokeFill(PAL.amber);
+  // arms with hands
+  const arm = (o.gesture || 0) * Math.sin(t * 2.6 + ph) * 0.55;
+  for (const side of [-1, 1]) {
+    ctx.save(); ctx.translate(side * 92, -250); ctx.rotate(side * (-0.28 + arm));
+    rr(-19, 0, 38, 168, 16); strokeFill(coat);
+    ellipse(0, 176, 25, 27); strokeFill(skin); ctx.restore();
+  }
+  // big cartoon head
+  ctx.save(); ctx.translate(0, -452); ctx.rotate(turn);
+  ellipse(0, 0, 126, 142); strokeFill(skin);
+  // cheeks
+  ctx.fillStyle = '#d96f62' + '55'; ellipse(-78, 46, 26, 17); ctx.fill(); ellipse(78, 46, 26, 17); ctx.fill();
+  // hair cap with tuft
+  ctx.beginPath(); ctx.arc(0, -22, 128, Math.PI * 1.02, Math.PI * 1.98); ctx.lineTo(112, -66); ctx.lineTo(-112, -66); ctx.closePath();
+  strokeFill(hair);
+  ctx.beginPath(); ctx.moveTo(-30, -130); ctx.quadraticCurveTo(10, -178, 52, -126); ctx.lineTo(24, -122); ctx.closePath(); strokeFill(hair);
+  // eyes (large whites, iris, shine) + mood brows
+  const wide = mood === 'fear' ? 1.22 : 1;
   const eye = (ex) => {
-    if (blink) { ctx.beginPath(); ctx.moveTo(ex - 26, -8); ctx.lineTo(ex + 26, -8); ctx.strokeStyle = INK; ctx.lineWidth = 9; ctx.stroke(); }
-    else { ellipse(ex + (turn > 0 ? 6 : -4), -8, 22, 27); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-      ellipse(ex + (turn > 0 ? 12 : 2), -5, 9, 13); ctx.fillStyle = o.eye || INK; ctx.fill(); }
+    if (blink) { ctx.beginPath(); ctx.moveTo(ex - 32, -6); ctx.lineTo(ex + 32, -6); ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.stroke(); }
+    else {
+      ellipse(ex, -6, 30 * wide, 34 * wide); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 8; ctx.stroke();
+      const ix = ex + (turn > 0 ? 8 : -4);
+      ellipse(ix, -2, 13, 17); ctx.fillStyle = o.eye || '#20263a'; ctx.fill();
+      ellipse(ix - 4, -9, 5, 6); ctx.fillStyle = '#fff'; ctx.fill();
+    }
   };
-  eye(-44); eye(44);
-  // mouth (talks)
-  if (mouth > 0.02) { ellipse(0, 62, 26 + mouth * 10, 5 + mouth * 22); ctx.fillStyle = '#5a2330'; ctx.fill(); ctx.stroke(); }
-  else { ctx.beginPath(); ctx.moveTo(-24, 65); ctx.lineTo(24, 65); ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.stroke(); }
+  eye(-50); eye(50);
+  ctx.lineWidth = 9; ctx.strokeStyle = hair; ctx.lineCap = 'round';
+  const brow = (ex, dir) => {
+    ctx.beginPath();
+    const lift = mood === 'fear' ? -18 : mood === 'anger' ? 12 : 0;
+    ctx.moveTo(ex - 26, -52 + lift * dir); ctx.lineTo(ex + 26, -56 - lift * dir); ctx.stroke();
+  };
+  brow(-50, 1); brow(50, -1);
+  // nose + mouth
+  ctx.beginPath(); ctx.moveTo(0, 4); ctx.quadraticCurveTo(12, 30, -4, 34); ctx.strokeStyle = '#8d5b45'; ctx.lineWidth = 6; ctx.stroke();
+  if (mouth > 0.02) { ellipse(0, 72, 22 + mouth * 16, 6 + mouth * 27); ctx.fillStyle = '#6a2634'; ctx.fill(); ctx.lineWidth = 7; ctx.stroke();
+    if (mouth > 0.35) { ctx.beginPath(); ctx.moveTo(-18, 62); ctx.lineTo(18, 62); ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.stroke(); } }
+  else if (mood === 'fear') { ellipse(0, 78, 18, 14); ctx.fillStyle = '#4a1c28'; ctx.fill(); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(0, 58, 30, 0.15 * Math.PI, 0.85 * Math.PI); ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.stroke(); }
+  if (mood === 'fear') { ctx.fillStyle = '#8fd3e6'; ctx.beginPath(); ctx.ellipse(112, -18, 9, 16, -0.4, 0, TAU); ctx.fill(); }
   ctx.restore(); ctx.restore();
 }
 
@@ -164,16 +193,23 @@ function diagram(col, t) {
 }
 function closeFace(col, t, mouth, blink) {
   baseSky(col, t);
-  ctx.save(); ctx.translate(540, 900); ctx.scale(2.2, 2.2);
-  ellipse(0, 0, 130, 156); strokeFill(PAL.skin, 10);
-  ctx.beginPath(); ctx.arc(0, -20, 132, Math.PI * 1.02, Math.PI * 1.98); ctx.lineTo(116, -80); ctx.lineTo(-116, -80); ctx.closePath();
-  strokeFill('#171d2c', 10);
+  ctx.save(); ctx.translate(540, 900); ctx.scale(2.35, 2.35);
+  ellipse(0, 0, 132, 152); strokeFill(PAL.skin, 11);
+  ctx.fillStyle = '#d96f62' + '55'; ellipse(-84, 48, 26, 16); ctx.fill(); ellipse(84, 48, 26, 16); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -22, 134, Math.PI * 1.02, Math.PI * 1.98); ctx.lineTo(118, -72); ctx.lineTo(-118, -72); ctx.closePath();
+  strokeFill('#171d2c', 11);
   const eye = (ex) => {
-    if (blink) { ctx.beginPath(); ctx.moveTo(ex - 28, -6); ctx.lineTo(ex + 28, -6); ctx.strokeStyle = INK; ctx.lineWidth = 9; ctx.stroke(); }
-    else { ellipse(ex, -6, 24, 29); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke(); ellipse(ex + 6, -2, 10, 14); ctx.fillStyle = col; ctx.fill(); }
+    if (blink) { ctx.beginPath(); ctx.moveTo(ex - 32, -8); ctx.lineTo(ex + 32, -8); ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.stroke(); }
+    else { ellipse(ex, -8, 28, 33); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 9; ctx.stroke();
+      ellipse(ex + 6, -3, 13, 17); ctx.fillStyle = '#20263a'; ctx.fill();
+      ellipse(ex + 1, -11, 5, 6); ctx.fillStyle = '#fff'; ctx.fill(); }
   };
-  eye(-48); eye(48);
-  if (mouth > 0.02) { ellipse(0, 76, 30 + mouth * 12, 6 + mouth * 24); ctx.fillStyle = '#5a2330'; ctx.fill(); ctx.stroke(); }
+  eye(-52); eye(52);
+  ctx.lineWidth = 10; ctx.strokeStyle = '#171d2c';
+  for (const ex of [-52, 52]) { ctx.beginPath(); ctx.moveTo(ex - 28, -54); ctx.lineTo(ex + 28, -58); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(13, 30, -4, 36); ctx.strokeStyle = '#8d5b45'; ctx.lineWidth = 7; ctx.stroke();
+  if (mouth > 0.02) { ellipse(0, 80, 26 + mouth * 14, 7 + mouth * 26); ctx.fillStyle = '#6a2634'; ctx.fill(); ctx.lineWidth = 8; ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(0, 64, 30, 0.15 * Math.PI, 0.85 * Math.PI); ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.stroke(); }
   ctx.restore(); dust(col, t);
 }
 function ripple(col, t, at, period = 2.4) {
@@ -208,7 +244,17 @@ function buildCaptions() {
       const s = ws.length ? Math.max(T.lines[i].start, ws[idx].s - 0.05)
         : T.lines[i].start + (acc / total) * (T.lines[i].end - T.lines[i].start);
       acc += counts[j]; from = idx;
-      caps.push({ line: i, s, words: c.split(/\s+/).map((w) => ({ txt: w.replace('*', ''), hi: w.startsWith('*') })) });
+      // karaoke timing: walk through the word-timing list alongside the caption words
+      let wi = idx;
+      const parts = c.split(/\s+/).map((w) => {
+        const target = norm(w);
+        while (wi < ws.length - 1 && norm(ws[wi].w) !== target &&
+               !(target.length > 2 && norm(ws[wi].w).startsWith(target))) wi++;
+        const at = ws[wi] ? ws[wi].s : s;
+        if (wi < ws.length - 1) wi++;
+        return { txt: w.replace('*', ''), hi: w.startsWith('*'), s: at };
+      });
+      caps.push({ line: i, s, words: parts });
     });
   });
   caps.forEach((c, k) => {
@@ -238,7 +284,10 @@ function drawCaption(c, col, t) {
   let x = 540 - total / 2;
   c.words.forEach((w, k) => {
     const s = w.txt + ' ', mid = x + ctx.measureText(s).width / 2;
-    ctx.strokeText(s, mid, 1550); ctx.fillStyle = w.hi ? col : '#ffffff'; ctx.fillText(s, mid, 1550);
+    ctx.strokeText(s, mid, 1550);
+    const spoken = t >= (w.s == null ? c.s : w.s);
+    ctx.fillStyle = spoken ? (w.hi ? col : '#ffffff') : '#7c8496';
+    ctx.fillText(s, mid, 1550);
     x += widths[k];
   });
   ctx.restore();
@@ -264,7 +313,7 @@ function drawHUD(t, i, col) {
   ctx.font = `700 46px ${FONT}`; ctx.fillStyle = PAL.pale;
   ctx.fillText(CH_NAMES[chapterFor(i)] || '', 100, 135);
   ctx.font = '700 28px sans-serif'; ctx.fillStyle = '#ffffff88'; ctx.textAlign = 'right';
-  ctx.fillText(`${fmt(t)} · PREVIEW`, 1010, 130);
+  ctx.fillText(fmt(t), 1010, 130);
   const sh = ctx.createLinearGradient(0, 1260, 0, H);
   sh.addColorStop(0, '#00000000'); sh.addColorStop(0.5, '#03040acc'); sh.addColorStop(1, '#020308ee');
   ctx.fillStyle = sh; ctx.fillRect(0, 1260, W, H - 1260);
@@ -313,6 +362,15 @@ function draw(t) {
   ctx.restore();
 
   drawHUD(t, i, col);
+  if (t < T.lines[0].start - 0.2) {
+    // 10-second music-only cold open: series title card, no narration or captions
+    ctx.save(); ctx.globalAlpha = Math.min(1, t / 0.8, (T.lines[0].start - t) / 0.8);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 116px ${FONT}`; ctx.lineWidth = 18; ctx.lineJoin = 'round'; ctx.strokeStyle = INK;
+    ctx.strokeText('अंधेरे के पीछे', 540, 820); ctx.fillStyle = '#fff'; ctx.fillText('अंधेरे के पीछे', 540, 820);
+    ctx.font = `700 40px ${FONT}`; ctx.fillStyle = col;
+    ctx.fillText('एक सच्चा सुराग · दो गलत रास्ते', 540, 990); ctx.restore();
+  }
   if (/^(TITLE|EP_TITLE|PROMISE|PROMISE2|OUTRO)$/.test(lab)) drawTitle(lab, t - start, col);
   drawCaption(cap, col, t);
   const fade = Math.min(clamp(t / 0.35), clamp((T.dur - t) / 0.7));
