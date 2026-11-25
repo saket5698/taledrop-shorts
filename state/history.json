@@ -20,5 +20,18 @@
     ],
     "status": "youtube+instagram published",
     "published_at": "2026-11-24T11:25:48Z"
+  },
+  {
+    "date": "2026-11-25T13:38:03.038160+05:30",
+    "slug": "deep-dive-20261125-0753",
+    "mode": "deep-dive",
+    "title": "Your Fingers Don't Wrinkle From Water - Your Nerves Do It",
+    "youtube_url": "https://www.youtube.com/watch?v=Iw9aNlgsXhs",
+    "instagram_url": null,
+    "sources": [
+      "Wikipedia, \"Wrinkle\" (water-immersion wrinkling is driven by nerves and vasoconstriction, not water absorption) https://en.wikipedia.org/wiki/Wrinkle",
+      "PLOS ONE, \"Water-immersion finger-wrinkling improves grip efficiency in handling wet objects\" (wrinkles cut the force needed to grip wet objects by about 20 percent) https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0253185"
+    ],
+    "status": "youtube uploaded; instagram pending"
   }
 ]
