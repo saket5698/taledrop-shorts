@@ -30,7 +30,7 @@ STATE = ROOT / "state"
 HISTORY = STATE / "history.json"
 LOG = ROOT / "AUTO_LOG.md"
 IG_API = "https://graph.facebook.com/v21.0"
-IG_APP_ID = os.environ.get("IG_APP_ID") or "2412489276182320"
+IG_APP_ID = os.environ.get("IG_APP_ID") or "1125696607109973"
 YT_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"]
 
 IST = timezone(timedelta(hours=5, minutes=30))
