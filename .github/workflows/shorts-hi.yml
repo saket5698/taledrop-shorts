@@ -34,9 +34,9 @@ env:
   FACELESS_HOME: ${{ github.workspace }}/.cache/faceless
   HF_HOME: ${{ github.workspace }}/.cache/faceless/hf
   SOFTWARE_GL: '1'
-  QS: '&res=0.6&aa=0&shadow=1024'
+  QS: '&res=0.7&aa=0&shadow=1024'
   FPS: '24'
-  MODE: hindi-mythology
+  MODE: hindi-mythology-2d
 
 jobs:
   short:
@@ -96,10 +96,10 @@ jobs:
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
           echo "Slug: $SLUG"
 
-      - name: Create project from style example
+      - name: Create project folder
         run: |
-          bash .opencode/skills/faceless-shorts/scripts/new_video.sh \
-            dark-mythology-history "${{ steps.prep.outputs.slug }}" --dir work
+          mkdir -p "work/${{ steps.prep.outputs.slug }}"
+          echo "Project folder ready"
 
       - name: Write bounded sourced Hindi script
         env:
@@ -120,9 +120,6 @@ jobs:
           python3 -c 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8")); json.load(open(sys.argv[2],encoding="utf-8")); json.load(open(sys.argv[3],encoding="utf-8"))' \
             "$PROJ/script.json" "$PROJ/publish.json" "state-hi/${{ steps.prep.outputs.slug }}.json"
 
-      - name: Generate deterministic shots
-        run: python3 scripts/generate_shots.py "work/${{ steps.prep.outputs.slug }}" "$MODE"
-
       - name: Build, verify and publish
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
@@ -141,7 +138,7 @@ jobs:
             export YOUTUBE_CLIENT_SECRET="$HI_YT_CLIENT_SECRET"
             export YOUTUBE_REFRESH_TOKEN="$HI_YT_REFRESH_TOKEN"
           fi
-          bash scripts/build_short.sh "${{ steps.prep.outputs.slug }}" "$MODE"
+          bash scripts/build_short_2d.sh "${{ steps.prep.outputs.slug }}"
 
       - name: Upload QA artifacts
         if: always()
