@@ -17,6 +17,9 @@ from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
 
+try: sys.stdout.reconfigure(encoding='utf-8')   # Hindi text in line logs (Windows defaults to cp1252)
+except Exception: pass
+
 HOME = Path(os.environ.get('FACELESS_HOME', Path.home() / '.faceless-shorts'))
 KDIR = HOME / 'kokoro'
 FILES = {
@@ -28,8 +31,16 @@ GOOD = {
     'am_onyx': 'US male, low', 'af_heart': 'US female, warm (best overall)', 'af_bella': 'US female, bright',
     'af_nicole': 'US female, soft and close', 'bm_george': 'UK male, documentary', 'bm_fable': 'UK male, storyteller',
     'bf_emma': 'UK female, calm',
+    # Hindi voices (Devanagari script). "hi-*" = Piper, offline, no account.
+    'hi-pratham': 'Hindi male, offline (default for Hindi)', 'hi-priyamvada': 'Hindi female, offline',
+    'hi-rohan': 'Hindi male, deeper, offline',
+    # Azure needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION; best prose, needs network.
+    'az:hi-IN-ArjunNeural': 'Hindi male, Azure neural', 'az:hi-IN-AaravNeural': 'Hindi male, Azure neural',
+    'az:hi-IN-KavyaNeural': 'Hindi female, Azure neural', 'az:hi-IN-AnanyaNeural': 'Hindi female, Azure neural',
 }
 SR = 24000
+PIPER_DIR = HOME / 'piper-hi'
+PIPER_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/{v}/medium/hi_IN-{v}-medium.onnx'
 
 
 def ensure_models():
@@ -39,6 +50,70 @@ def ensure_models():
         if p.exists() and p.stat().st_size > 1_000_000: continue
         print(f'downloading {name} (once)...', flush=True)
         tmp = p.with_suffix('.part'); urllib.request.urlretrieve(url, tmp); tmp.rename(p)
+
+
+def resample(x, sr):
+    """any sample rate -> SR, so the rest of the pipeline can assume 24 kHz"""
+    if int(sr) == SR: return x
+    from math import gcd
+    from scipy.signal import resample_poly
+    g = gcd(int(sr), SR)
+    return resample_poly(x, SR // g, int(sr) // g)
+
+
+def ensure_piper(name):
+    PIPER_DIR.mkdir(parents=True, exist_ok=True)
+    model = PIPER_DIR / f'hi_IN-{name}-medium.onnx'
+    cfg = PIPER_DIR / f'hi_IN-{name}-medium.onnx.json'
+    for p, suffix in ((model, ''), (cfg, '.json')):
+        if p.exists() and p.stat().st_size > 1000: continue
+        print(f'downloading {p.name} (once)...', flush=True)
+        tmp = p.with_suffix(p.suffix + '.part')
+        urllib.request.urlretrieve(PIPER_URL.format(v=name) + suffix, tmp)
+        tmp.rename(p)
+    return model, cfg
+
+
+def piper_say(voice, text, speed):
+    import io, wave
+    from piper import PiperVoice
+    model, cfg = ensure_piper(voice[3:])
+    v = PiperVoice.load(str(model), config_path=str(cfg))
+    buf = io.BytesIO()
+    with wave.open(buf, 'wb') as wf:
+        try:
+            from piper.config import SynthesisConfig
+            v.synthesize_wav(text, wf, syn_config=SynthesisConfig(length_scale=1.0 / speed))
+        except Exception:
+            v.synthesize_wav(text, wf, set_wav_format=True)
+    buf.seek(0)
+    sr, data = wavfile.read(buf)
+    return resample(np.asarray(data, dtype=np.float64) / 32768.0, sr)
+
+
+def azure_say(voice, text, speed):
+    """Azure Speech REST. Needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION (F0 free tier: 500k chars/month)."""
+    import io, urllib.error, wave
+    key = os.environ.get('AZURE_SPEECH_KEY', '').strip()
+    region = os.environ.get('AZURE_SPEECH_REGION', 'centralindia').strip()
+    if not key: sys.exit('azure voice needs AZURE_SPEECH_KEY and AZURE_SPEECH_REGION')
+    name = voice[3:]
+    lang = '-'.join(name.split('-')[:2])
+    rate = '' if abs(speed - 1) < 0.01 else f'<prosody rate="{speed - 1:+.0%}">'
+    ssml = (f'<speak version="1.0" xml:lang="{lang}"><voice name="{name}">'
+            f'{rate}{text}{"</prosody>" if rate else ""}</voice></speak>')
+    req = urllib.request.Request(
+        f'https://{region}.tts.speech.microsoft.com/cognitiveservices/v1',
+        data=ssml.encode('utf-8'),
+        headers={'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml',
+                 'X-Microsoft-OutputFormat': 'riff-24khz-16bit-mono-pcm'})
+    try:
+        data = urllib.request.urlopen(req, timeout=90).read()
+    except urllib.error.HTTPError as e:
+        sys.exit(f'azure tts {e.code}: {e.read().decode("utf-8", "ignore")[:300]}')
+    with wave.open(io.BytesIO(data)) as wf:
+        sr, frames = wf.getframerate(), wf.readframes(wf.getnframes())
+    return resample(np.frombuffer(frames, dtype=np.int16).astype(np.float64) / 32768.0, sr)
 
 
 def trim(x, thr=0.008):
@@ -69,20 +144,27 @@ def main():
     if a.list:
         for k, v in GOOD.items(): print(f'{k:12s} {v}')
         return
-    ensure_models()
-    if a.download: return
     if not a.project: ap.error('project folder missing')
-    from kokoro_onnx import Kokoro
-    P = Path(a.project); S = json.loads((P / 'script.json').read_text())
+    P = Path(a.project); S = json.loads((P / 'script.json').read_text(encoding='utf-8'))
     voice = a.voice or S.get('voice', 'am_michael'); speed = float(a.speed or S.get('speed', 1.0))
-    k = Kokoro(str(KDIR / 'kokoro-v1.0.onnx'), str(KDIR / 'voices-v1.0.bin'))
-    lang = 'en-gb' if voice.startswith('b') else 'en-us'
-    say = lambda text: trim(np.asarray(k.create(text, voice=voice, speed=speed, lang=lang)[0], dtype=np.float64))
-    # group the lines into whole sentences (a line ending in . ? ! closes one; "break": true forces a close)
+    if a.download:
+        if not (voice.startswith('hi-') or voice.startswith('az:')): ensure_models()
+        return
+    if voice.startswith('hi-'):
+        say = lambda text: trim(piper_say(voice, text, speed))
+    elif voice.startswith('az:'):
+        say = lambda text: trim(azure_say(voice, text, speed))
+    else:
+        ensure_models()
+        from kokoro_onnx import Kokoro
+        k = Kokoro(str(KDIR / 'kokoro-v1.0.onnx'), str(KDIR / 'voices-v1.0.bin'))
+        lang = 'en-gb' if voice.startswith('b') else 'en-us'
+        say = lambda text: trim(np.asarray(k.create(text, voice=voice, speed=speed, lang=lang)[0], dtype=np.float64))
+    # group the lines into whole sentences (a line ending in . ? ! (or the Hindi danda) closes one; "break": true forces a close)
     groups, cur = [], []
     for i, ln in enumerate(S['lines']):
         cur.append(i)
-        if re.search(r'[.?!]["\')]*$', ln['text'].strip()) or ln.get('break') or i == len(S['lines']) - 1: groups.append(cur); cur = []
+        if re.search(r'[.?!।॥]["\')]*$', ln['text'].strip()) or ln.get('break') or i == len(S['lines']) - 1: groups.append(cur); cur = []
     out = [np.zeros(int(float(S.get('lead', 0.4)) * SR))]; t = len(out[0]) / SR; lines = [None] * len(S['lines'])
     for g in groups:
         x = say(' '.join(S['lines'][i]['text'] for i in g))
@@ -106,7 +188,7 @@ def main():
     (P / 'data').mkdir(exist_ok=True)
     wavfile.write(P / 'data/narration.wav', SR, (y * 32767).astype(np.int16))
     dur = len(y) / SR
-    (P / 'data/lines.json').write_text(json.dumps({'duration': round(dur, 3), 'voice': voice, 'speed': speed, 'lines': lines}, indent=1))
+    (P / 'data/lines.json').write_text(json.dumps({'duration': round(dur, 3), 'voice': voice, 'speed': speed, 'lines': lines}, indent=1, ensure_ascii=False), encoding='utf-8')
     print(f'data/narration.wav ({dur:.2f} s, {voice} x{speed}) + data/lines.json. Next: words.py')
 
 

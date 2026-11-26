@@ -14,7 +14,11 @@ import argparse, json, re, subprocess
 from difflib import SequenceMatcher
 from pathlib import Path
 
-norm = lambda w: re.sub(r'[^a-z0-9]+', '', w.lower())
+try: __import__('sys').stdout.reconfigure(encoding='utf-8')
+except Exception: pass
+
+norm = lambda w: re.sub(r'[^0-9a-z\u0900-\u097f]+', '', w.lower())
+DEVA = re.compile(r'[\u0900-\u097f]')
 
 
 def align(script_words, heard, t0, t1):
@@ -38,25 +42,27 @@ def align(script_words, heard, t0, t1):
 
 
 def inline_fallback(P, S):
-    L = json.loads((P / 'data/lines.json').read_text())['lines']; words = []
+    L = json.loads((P / 'data/lines.json').read_text(encoding='utf-8'))['lines']; words = []
     for i, ln in enumerate(S['lines']):
         toks = [w for w in ln['text'].split() if norm(w)]
-        wts = [len(norm(w)) + 2.5 + (2.5 if w.endswith(',') else 4.5 if re.search(r'[.?!]$', w) and k < len(toks) - 1 else 0) for k, w in enumerate(toks)]
+        wts = [len(norm(w)) + 2.5 + (2.5 if w.endswith(',') else 4.5 if re.search(r'[.?!।]$', w) and k < len(toks) - 1 else 0) for k, w in enumerate(toks)]
         lo, hi = L[i]['start'], L[i]['end']; c = lo; tot = sum(wts)
         for w, wt in zip(toks, wts):
             d = (hi - lo) * wt / tot; speak = d - (hi - lo) * (wt - len(norm(w)) - 2.5) / tot
             words.append({'w': w, 'line': i, 's': round(c, 3), 'e': round(c + speak * 0.92, 3)}); c += d
-    (P / 'data/words.json').write_text(json.dumps(words, indent=1))
-    (P / 'data/words.txt').write_text('\n'.join(f"{w['s']:7.2f} {w['e']:7.2f}  L{w['line']:<2d} {w['w']}" for w in words))
+    (P / 'data/words.json').write_text(json.dumps(words, indent=1, ensure_ascii=False), encoding='utf-8')
+    (P / 'data/words.txt').write_text('\n'.join(f"{w['s']:7.2f} {w['e']:7.2f}  L{w['line']:<2d} {w['w']}" for w in words), encoding='utf-8')
+    print(f'data/words.json: {len(words)} words (spread inside the voice line times)')
     print(f'data/words.json: {len(words)} words (spread inside the voice line times)')
 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('project'); ap.add_argument('--audio'); a = ap.parse_args()
-    P = Path(a.project); S = json.loads((P / 'script.json').read_text())
+    P = Path(a.project); S = json.loads((P / 'script.json').read_text(encoding='utf-8'))
+    hindi = bool(DEVA.search(' '.join(ln['text'] for ln in S['lines'])))
     try:
         from faster_whisper import WhisperModel
-        model = WhisperModel('small.en', device='cpu', compute_type='int8')
+        model = WhisperModel('small' if hindi else 'small.en', device='cpu', compute_type='int8')
     except Exception as e:
         if a.audio or not (P / 'data/lines.json').exists():
             raise SystemExit(f'Whisper is needed for your own recording and could not load: {e}')
@@ -82,12 +88,12 @@ def main():
         lines = []
         for i, ln in enumerate(S['lines']):
             ws = [w for w in words if w['line'] == i]; lines.append({'i': i, 'text': ln['text'], 'start': ws[0]['s'], 'end': ws[-1]['e']})
-        (P / 'data/lines.json').write_text(json.dumps({'duration': round(dur_audio, 3), 'lines': lines}, indent=1))
+        (P / 'data/lines.json').write_text(json.dumps({'duration': round(dur_audio, 3), 'lines': lines}, indent=1, ensure_ascii=False), encoding='utf-8')
     else:   # keep every word inside its line's exact TTS window
-        L = json.loads((P / 'data/lines.json').read_text())['lines']
+        L = json.loads((P / 'data/lines.json').read_text(encoding='utf-8'))['lines']
         for w in words: lo, hi = L[w['line']]['start'], L[w['line']]['end']; w['s'] = round(min(max(w['s'], lo), hi), 3); w['e'] = round(min(max(w['e'], w['s']), hi), 3)
-    (P / 'data/words.json').write_text(json.dumps(words, indent=1))
-    (P / 'data/words.txt').write_text('\n'.join(f"{w['s']:7.2f} {w['e']:7.2f}  L{w['line']:<2d} {w['w']}" for w in words))
+    (P / 'data/words.json').write_text(json.dumps(words, indent=1, ensure_ascii=False), encoding='utf-8')
+    (P / 'data/words.txt').write_text('\n'.join(f"{w['s']:7.2f} {w['e']:7.2f}  L{w['line']:<2d} {w['w']}" for w in words), encoding='utf-8')
     print(f'data/words.json: {len(words)} words (Whisper heard {len(heard)})')
 
 
