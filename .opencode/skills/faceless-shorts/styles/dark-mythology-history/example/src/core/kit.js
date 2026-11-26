@@ -6,7 +6,7 @@ export const P = {
   void: '#0A0C11', room: '#151A24', mid: '#1F2633', light: '#2B3343', beam: '#F1D9A6', red: '#E4322B', redDeep: '#8E1D1A',
   cream: '#EAE3D2', tape: '#E9C46A', steel: '#5B6577', paper: '#D8CFBA', manila: '#B8955A', cork: '#4A3426', ink: '#06070A',
 };
-const MONO = 'FreeMono';
+const MONO = "'FreeMono', 'NotoSansDevanagari'";
 
 // ═════════════════════════ PEOPLE: faceless silhouettes ═════════════════════════
 const rad = (d) => d * Math.PI / 180;
@@ -121,13 +121,22 @@ export function cassette(x, y, s = 1, spin = 0) {
 export function marker(x, y, s, n) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.beginPath(); ctx.moveTo(-60, 0); ctx.lineTo(-40, -110); ctx.lineTo(40, -110); ctx.lineTo(60, 0); ctx.closePath(); ctx.fillStyle = P.tape; ctx.fill(); ctx.font = '900 70px Inter'; ctx.fillStyle = P.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), 0, -52); ctx.restore(); }
 /** hand-drawn red circle around (x, y); p 0..1 draws it on */
 export function redCircle(x, y, rx, ry, p = 1) { if (p <= 0) return; ctx.beginPath(); for (let i = 0; i <= 60 * p; i++) { const a = -1.9 + i / 60 * (TAU + 0.5), k = 1 + 0.05 * Math.sin(i * 0.7); const px = x + Math.cos(a) * rx * k, py = y + Math.sin(a) * ry * k; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.strokeStyle = P.red; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.stroke(); }
-/** typewriter date stamp, lower-left; p 0..1 types it on (with a cursor) */
+/** typewriter date stamp, lower-left; p 0..1 types it on (with a cursor). Grapheme-safe for Devanagari. */
+const GRSEG = (() => { try { return new Intl.Segmenter('hi', { granularity: 'grapheme' }); } catch (e) { return null; } })();
+const graphemes = (s) => (GRSEG ? [...GRSEG.segment(String(s))].map((x) => x.segment) : [...String(s)]);
 export function dateStamp(line1, line2, p = 1, x = 90, y = 1240) {
-  const n1 = Math.floor(line1.length * clamp(p * 1.6)), n2 = Math.floor(line2.length * clamp(p * 1.6 - 0.6));
+  const g1 = graphemes(line1), g2 = graphemes(line2);
+  const n1 = Math.floor(g1.length * clamp(p * 1.6)), n2 = Math.floor(g2.length * clamp(p * 1.6 - 0.6));
+  const t1 = g1.slice(0, n1).join(''), t2 = g2.slice(0, n2).join('');
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 12;
-  ctx.font = `700 92px ${MONO}`; ctx.fillStyle = P.cream; ctx.fillText(line1.slice(0, n1), x, y);
-  ctx.font = `700 56px ${MONO}`; ctx.fillStyle = P.red; ctx.fillText(line2.slice(0, n2), x, y + 76);
-  ctx.shadowBlur = 0; if (p < 1 && Math.floor(p * 20) % 2 === 0) { ctx.fillStyle = P.cream; ctx.fillRect(x + (n2 ? ctx.measureText(line2.slice(0, n2)).width : (ctx.font = `700 92px ${MONO}`, ctx.measureText(line1.slice(0, n1)).width)) + 6, y + (n2 ? 18 : -56), 26, n2 ? 46 : 64); }
+  ctx.font = `700 92px ${MONO}`; ctx.fillStyle = P.cream; ctx.fillText(t1, x, y);
+  ctx.font = `700 56px ${MONO}`; ctx.fillStyle = P.red; ctx.fillText(t2, x, y + 76);
+  ctx.shadowBlur = 0;
+  if (p < 1 && Math.floor(p * 20) % 2 === 0) {
+    ctx.font = t2 ? `700 56px ${MONO}` : `700 92px ${MONO}`;
+    ctx.fillStyle = P.cream;
+    ctx.fillRect(x + (t2 ? ctx.measureText(t2).width : ctx.measureText(t1).width) + 6, y + (t2 ? 18 : -56), 26, t2 ? 46 : 64);
+  }
 }
 /** black redaction bars over text lines (for "the file says…") */
 export function redacted(x, y, widths, p = 1) { widths.forEach((w, i) => { ctx.fillStyle = P.ink; ctx.fillRect(x, y + i * 60, w * clamp(p * 2 - i * 0.3), 36); }); }

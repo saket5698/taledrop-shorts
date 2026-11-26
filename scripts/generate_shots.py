@@ -4,7 +4,10 @@ import json
 import sys
 from pathlib import Path
 
-EXPECTED = {"deep-dive": 10, "dark-mythology-history": 10, "stick-story": 12}
+try: sys.stdout.reconfigure(encoding="utf-8")   # Devanagari labels in logs (Windows defaults to cp1252)
+except Exception: pass
+
+EXPECTED = {"deep-dive": 10, "dark-mythology-history": 10, "hindi-mythology": 10, "stick-story": 12}
 
 
 def fail(msg):
@@ -14,7 +17,7 @@ def fail(msg):
 
 def main():
     if len(sys.argv) != 3:
-        fail("usage: generate_shots.py <project-dir> <deep-dive|dark-mythology-history|stick-story>")
+        fail("usage: generate_shots.py <project-dir> <deep-dive|dark-mythology-history|hindi-mythology|stick-story>")
     project = Path(sys.argv[1]).resolve()
     mode = sys.argv[2]
     if mode not in EXPECTED:

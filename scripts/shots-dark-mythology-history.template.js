@@ -4,7 +4,7 @@
 // gold date ribbons, crimson string and case files. All overlays stay above the caption zone (y 1250-1550).
 import * as THREE from 'three';
 import { ctx, W, H, clamp, lerp, seg, eo, eio, eob, rr } from './core/lib.js';
-import { L } from './core/timing.js';
+import { L, Le } from './core/timing.js';
 import { camera } from './core/engine.js';
 import { Human } from './core/human.js';
 import * as SETS from './core/sets3d.js';
@@ -207,6 +207,7 @@ export function buildShots(E) {
 
   for (let i = 0; i < LABELS.length; i++) {
     const spec = PLAN[i % PLAN.length], st = cut(i), text = LABELS[i];
+    const d = Math.max(0.35, Le(i) - st);
     add({ id: `S${String(i + 1).padStart(2, '0')}`, at: st, note: `line ${i + 1}: ${text}`, draw(lt, d, t, blit) {
       const k = eio(clamp(lt / Math.max(0.35, d)));
       spec.set.update(t);

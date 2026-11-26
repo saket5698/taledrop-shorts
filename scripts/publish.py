@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "state"
 HISTORY = STATE / "history.json"
 LOG = ROOT / "AUTO_LOG.md"
+LANG = "en"   # "hi" writes state-hi/history.json + AUTO_LOG-hi.md so the two channels never share history
 IG_API = "https://graph.facebook.com/v21.0"
 IG_APP_ID = os.environ.get("IG_APP_ID") or "1125696607109973"
 YT_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"]
@@ -76,8 +77,18 @@ def load_history():
 
 
 def save_history(entries):
-    STATE.mkdir(parents=True, exist_ok=True)
+    HISTORY.parent.mkdir(parents=True, exist_ok=True)
     HISTORY.write_text(json.dumps(entries, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def use_language(lang):
+    global LANG, HISTORY, LOG
+    LANG = "hi" if lang == "hi" else "en"
+    if LANG == "hi":
+        STATE.mkdir(parents=True, exist_ok=True)
+        HISTORY = ROOT / "state-hi" / "history.json"
+        LOG = ROOT / "AUTO_LOG-hi.md"
+    return LANG
 
 
 def append_log(line):
@@ -197,14 +208,15 @@ def yt_existing_title(youtube, title):
 
 
 def yt_upload(youtube, mp4: Path, cover: Path, title, description, tags):
+    lang = LANG if LANG in ("hi", "en") else "en"
     body = {
         "snippet": {
             "title": title,
             "description": description,
             "tags": tags,
-            "categoryId": "23",
-            "defaultLanguage": "en",
-            "defaultAudioLanguage": "en",
+            "categoryId": "24" if lang == "hi" else "23",
+            "defaultLanguage": lang,
+            "defaultAudioLanguage": lang,
         },
         "status": {
             "privacyStatus": "public",
@@ -314,7 +326,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--project", required=True)
     ap.add_argument("--mode", default="")
+    ap.add_argument("--lang", default="", help="en (default) or hi; hindi-* modes imply hi")
     args = ap.parse_args()
+    use_language(args.lang or ("hi" if args.mode.startswith("hindi") else "en"))
 
     project = Path(args.project).resolve()
     meta = json.loads((project / "publish.json").read_text(encoding="utf-8"))
@@ -360,7 +374,7 @@ def main():
             append_log(f"SKIPPED-DUPLICATE | {args.mode} | `{slug}` | {title} | {duplicate}")
             print(json.dumps({"status": "skipped-duplicate", "youtube_url": duplicate}))
             return
-        video_url = host_video(mp4, slug, session)
+        video_url = host_video(mp4, slug, session) if (os.environ.get("IG_ACCESS_TOKEN") and os.environ.get("IG_USER_ID")) else None
         yt_url = yt_upload(youtube, mp4, cover, title, description, tags)
         # Save immediately so a later Instagram failure cannot cause a duplicate YouTube upload on retry.
         record("youtube uploaded; instagram pending")

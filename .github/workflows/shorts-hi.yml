@@ -1,0 +1,173 @@
+name: Katha-Sutra daily Hindi short (YouTube)
+
+# One Hindi mythology short a day on the @kathasutra channel.
+# Runs without any token until HI_YOUTUBE_* secrets exist: it still builds the MP4 and uploads it as a
+# QA artifact, so the first renders can be reviewed before the channel is connected.
+
+on:
+  schedule:
+    - cron: '30 3 * * *'   # 09:00 Asia/Kolkata
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Upload to YouTube when the run finishes?'
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kathasutra-shorts
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TZ: Asia/Kolkata
+  FACELESS_HOME: ${{ github.workspace }}/.cache/faceless
+  HF_HOME: ${{ github.workspace }}/.cache/faceless/hf
+  SOFTWARE_GL: '1'
+  QS: '&res=0.6&aa=0&shadow=1024'
+  FPS: '24'
+  MODE: hindi-mythology
+
+jobs:
+  short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          install-chromedriver: false
+
+      - name: Cache voice and whisper models
+        uses: actions/cache@v4
+        with:
+          path: .cache/faceless
+          key: faceless-hi-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: faceless-hi-${{ runner.os }}-
+
+      - name: Install Python and OpenCode CLI
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          npm install -g @opencode/cli@latest
+          opencode --version
+          ffmpeg -version | head -n 1
+          "${{ steps.chrome.outputs.chrome-path }}" --version
+
+      - name: Prepare model environment
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: bash .opencode/skills/faceless-shorts/scripts/setup.sh
+
+      - name: Pick slug
+        id: prep
+        run: |
+          mkdir -p work state state-hi
+          [ -f AUTO_LOG-hi.md ] || echo "# Katha-Sutra publish log" > AUTO_LOG-hi.md
+          SLUG="${MODE}-$(date -u +%Y%m%d-%H%M)"
+          jq -n --arg slug "$SLUG" --arg mode "$MODE" '{slug:$slug,mode:$mode}' > state/current.json
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+          echo "Slug: $SLUG"
+
+      - name: Create project from style example
+        run: |
+          bash .opencode/skills/faceless-shorts/scripts/new_video.sh \
+            dark-mythology-history "${{ steps.prep.outputs.slug }}" --dir work
+
+      - name: Write bounded sourced Hindi script
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.LLM_API_KEY }}
+          CI: 'true'
+        run: |
+          timeout --signal=TERM --kill-after=30s 8m \
+            opencode run --model opencode/hy4-flash-free \
+            "$(cat scripts/prompt-$MODE.md)"
+
+      - name: Verify writer output
+        run: |
+          PROJ="work/${{ steps.prep.outputs.slug }}"
+          [ -s "$PROJ/script.json" ] || { echo "writer did not create script.json" >&2; exit 2; }
+          [ -s "$PROJ/publish.json" ] || { echo "writer did not create publish.json" >&2; exit 2; }
+          [ -s "state-hi/${{ steps.prep.outputs.slug }}.json" ] || { echo "writer did not create state file" >&2; exit 2; }
+          python3 -c 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8")); json.load(open(sys.argv[2],encoding="utf-8")); json.load(open(sys.argv[3],encoding="utf-8"))' \
+            "$PROJ/script.json" "$PROJ/publish.json" "state-hi/${{ steps.prep.outputs.slug }}.json"
+
+      - name: Generate deterministic shots
+        run: python3 scripts/generate_shots.py "work/${{ steps.prep.outputs.slug }}" "$MODE"
+
+      - name: Build, verify and publish
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          HI_YT_CLIENT_ID: ${{ secrets.HI_YOUTUBE_CLIENT_ID }}
+          HI_YT_CLIENT_SECRET: ${{ secrets.HI_YOUTUBE_CLIENT_SECRET }}
+          HI_YT_REFRESH_TOKEN: ${{ secrets.HI_YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" != "yes" ]; then
+            export SKIP_PUBLISH=1
+          fi
+          if [ -z "${HI_YT_REFRESH_TOKEN:-}" ]; then
+            echo "HI_YOUTUBE_REFRESH_TOKEN is not set: building only, no upload"
+            export SKIP_PUBLISH=1
+          else
+            export YOUTUBE_CLIENT_ID="$HI_YT_CLIENT_ID"
+            export YOUTUBE_CLIENT_SECRET="$HI_YT_CLIENT_SECRET"
+            export YOUTUBE_REFRESH_TOKEN="$HI_YT_REFRESH_TOKEN"
+          fi
+          bash scripts/build_short.sh "${{ steps.prep.outputs.slug }}" "$MODE"
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-hi-${{ steps.prep.outputs.slug }}
+          path: |
+            work/${{ steps.prep.outputs.slug }}/renders/*.mp4
+            work/${{ steps.prep.outputs.slug }}/review/all.jpg
+            work/${{ steps.prep.outputs.slug }}/review/cover.jpg
+            work/${{ steps.prep.outputs.slug }}/check.log
+            work/${{ steps.prep.outputs.slug }}/audio.log
+            work/${{ steps.prep.outputs.slug }}/publish.json
+            work/${{ steps.prep.outputs.slug }}/script.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Commit state and log
+        if: always()
+        run: |
+          git config user.name "taledrop-bot"
+          git config user.email "taledrop-bot@users.noreply.github.com"
+          git add state-hi AUTO_LOG-hi.md
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "Automated Hindi short ${{ steps.prep.outputs.slug }}"
+            git push
+          fi

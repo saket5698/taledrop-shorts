@@ -12,7 +12,8 @@ let caps = [];
 function autoChunks(text) {
   const ws = text.toUpperCase().split(/\s+/).filter(Boolean), out = [];
   for (let i = 0; i < ws.length;) { const n = ws.length - i === 4 ? 2 : Math.min(3, ws.length - i); out.push(ws.slice(i, i + n)); i += n; }
-  return out.map((c) => { const k = c.reduce((b, w, j) => (w.replace(/[^A-Z]/g, '').length > c[b].replace(/[^A-Z]/g, '').length ? j : b), 0); return c.map((w, j) => (j === k ? '*' + w : w)).join(' '); });
+  const glen = (w) => [...w.replace(/[^\p{L}\p{N}]/gu, '')].length;   // Devanagari-safe word length
+  return out.map((c) => { const k = c.reduce((b, w, j) => (glen(w) > glen(c[b]) ? j : b), 0); return c.map((w, j) => (j === k ? '*' + w : w)).join(' '); });
 }
 
 export function buildCaptions(script) {
@@ -21,7 +22,7 @@ export function buildCaptions(script) {
     const chunks = (ln.caps ? ln.caps.split('|') : autoChunks(ln.text)).map((s) => s.trim()).filter(Boolean);
     const ws = lineWords(i); if (!ws.length) return;
     const counts = chunks.map((c) => c.split(/\s+/).length), N = counts.reduce((a, b) => a + b, 0);
-    const nm = (w) => String(w).toLowerCase().replace(/[^a-z0-9']+/g, '');
+    const nm = (w) => String(w).toLowerCase().replace(/[^\p{L}\p{N}']+/gu, '');
     let acc = 0, from = 0;
     chunks.forEach((c, j) => {
       // find the chunk's first word in the spoken line (from where the last chunk started); else place it by word count
@@ -40,10 +41,14 @@ export function buildCaptions(script) {
 }
 export const captionList = () => caps;
 
+const GRAPHEMES = (() => { try { return new Intl.Segmenter('hi', { granularity: 'grapheme' }); } catch (e) { return null; } })();
+const grams = (s) => (GRAPHEMES ? [...GRAPHEMES.segment(s)].map((x) => x.segment) : [...s]);   // never split क + ि
+
 export function drawCaption(t) {
   const c = caps.find((c) => t >= c.s && t < c.e); if (!c) return;
   // typewriter: the caption types on, letter by letter
-  const lt = t - c.s, total = c.words.reduce((a, w) => a + w.txt.length + 1, 0), n = Math.floor(clamp(lt / 0.35) * total);
-  let left = n; const shown = c.words.map((w) => { const k = Math.max(0, Math.min(w.txt.length, left)); left -= w.txt.length + 1; return { ...w, txt: w.txt.slice(0, k) }; }).filter((w) => w.txt.length);
+  const parts = c.words.map((w) => grams(w.txt));
+  const lt = t - c.s, total = parts.reduce((a, g) => a + g.length + 1, 0), n = Math.floor(clamp(lt / 0.35) * total);
+  let left = n; const shown = c.words.map((w, i) => { const g = parts[i], k = Math.max(0, Math.min(g.length, left)); left -= g.length + 1; return { ...w, txt: g.slice(0, k).join('') }; }).filter((w) => w.txt.length);
   if (shown.length) captionMono(shown, 540, CAPLOOK.y, 1);
 }

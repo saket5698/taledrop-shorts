@@ -39,7 +39,7 @@ GOOD = {
     'az:hi-IN-KavyaNeural': 'Hindi female, Azure neural', 'az:hi-IN-AnanyaNeural': 'Hindi female, Azure neural',
 }
 SR = 24000
-PIPER_DIR = HOME / 'piper-hi'
+PIPER_DIR = Path(os.environ.get('FACELESS_HOME') or HOME) / 'piper-hi'
 PIPER_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/{v}/medium/hi_IN-{v}-medium.onnx'
 
 

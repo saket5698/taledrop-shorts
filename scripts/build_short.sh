@@ -74,4 +74,8 @@ COVER_TIME="$(jq -r '.cover_time // 1.8' publish.json)"
 ffmpeg -v error -y -ss "$COVER_TIME" -i "$MP4" -frames:v 1 -q:v 2 review/cover.jpg
 
 echo "== publish =="
-python3 "$ROOT/scripts/publish.py" --project "$PROJ" --mode "$MODE"
+if [ "${SKIP_PUBLISH:-0}" = "1" ]; then
+  echo "SKIP_PUBLISH=1 (no channel token yet, or review-only run): MP4 kept in renders/ and uploaded as a QA artifact"
+else
+  python3 "$ROOT/scripts/publish.py" --project "$PROJ" --mode "$MODE"
+fi
