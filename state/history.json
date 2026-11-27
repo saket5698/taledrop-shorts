@@ -66,5 +66,18 @@
       "Wikipedia: Hydrophone — पानी के भीतर ध्वनि रिकॉर्ड करने वाले उपकरण, उनकी संवेदनशीलता और दूर की आवाज़ें पकड़ने की क्षमता https://en.wikipedia.org/wiki/Hydrophone"
     ],
     "published_at": "2026-11-26T20:15:00Z"
+  },
+  {
+    "date": "2026-11-27T18:06:44.548184+05:30",
+    "slug": "deep-dive-20261127-1218",
+    "mode": "deep-dive",
+    "title": "Your Knee Kicks Before Your Brain Even Knows",
+    "youtube_url": "https://www.youtube.com/watch?v=QC3hs6Zfxao",
+    "instagram_url": null,
+    "sources": [
+      "Wikipedia, \"Patellar reflex\" (monosynaptic knee-jerk arc through L2-L4, ~18 ms latency, hamstring relaxation) https://en.wikipedia.org/wiki/Patellar_reflex",
+      "Wikipedia, \"Stretch reflex\" (muscle spindles detect stretch; sensory and alpha motor neurons; shortest-latency spinal reflex) https://en.wikipedia.org/wiki/Stretch_reflex"
+    ],
+    "status": "youtube published; instagram failed: Instagram create media container failed (401): Authentication Error"
   }
 ]
