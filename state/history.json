@@ -115,5 +115,18 @@
       "https://en.wikipedia.org/wiki/%C3%89douard-L%C3%A9on_Scott_de_Martinville"
     ],
     "published_at": "2026-11-27T21:00:00Z"
+  },
+  {
+    "date": "2026-11-27T20:55:41.173056+05:30",
+    "slug": "spooky-stick-story-20261127-1507",
+    "mode": "spooky-stick-story",
+    "title": "A Gunshot at 2 A.M. - But Nobody Broke In",
+    "youtube_url": "https://www.youtube.com/watch?v=Ty1ehbufsqw",
+    "instagram_url": null,
+    "sources": [
+      "Wikipedia, \"Exploding head syndrome\" (documents the loud bang at waking, light flashes, and its harmless nature) https://en.wikipedia.org/wiki/Exploding_head_syndrome",
+      "StatPearls, \"Exploding Head Syndrome\" (NCBI Bookshelf clinical overview of this benign sleep-wake glitch) https://www.ncbi.nlm.nih.gov/books/NBK560817/"
+    ],
+    "status": "youtube published; instagram failed: Instagram create media container failed (401): Authentication Error"
   }
 ]
