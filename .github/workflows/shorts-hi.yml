@@ -81,11 +81,6 @@ jobs:
           ffmpeg -version | head -n 1
           "${{ steps.chrome.outputs.chrome-path }}" --version
 
-      - name: Prepare model environment
-        env:
-          CHROME: ${{ steps.chrome.outputs.chrome-path }}
-        run: bash .opencode/skills/faceless-shorts/scripts/setup.sh
-
       - name: Pick slug
         id: prep
         run: |

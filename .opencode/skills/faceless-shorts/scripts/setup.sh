@@ -26,7 +26,7 @@ if [ -x "$PY" ]; then
     else "$PY" -m pip install -q --upgrade pip >/dev/null 2>&1; "$PY" -m pip install -q numpy scipy kokoro-onnx faster-whisper >/dev/null 2>&1; fi
   fi
   if "$PY" -c "$CHECK" 2>/dev/null; then say python-env "ok ($VENV)"; else say python-env "BROKEN: run  $PY -m pip install numpy scipy kokoro-onnx faster-whisper"; ok=0; fi
-  if "$PY" "$SKILL/scripts/voice.py" --download >/dev/null 2>&1; then say voice "ok (Kokoro, $FH/kokoro)"; else say voice "model download FAILED (check the internet connection, re-run)"; ok=0; fi
+  if "$PY" "$SKILL/scripts/voice.py" --download >/dev/null 2>&1; then say voice "ok (Kokoro, $FH/kokoro)"; else say voice "WARNING: Kokoro download failed; English shorts may fail. Retrying once..."; if "$PY" "$SKILL/scripts/voice.py" --download >/dev/null 2>&1; then say voice "ok (Kokoro, $FH/kokoro) (retry)"; else say voice "WARNING: Kokoro download failed (network/HF). English shorts will fail at voice step."; fi; fi
   if "$PY" -c "from faster_whisper import WhisperModel; WhisperModel('small.en', device='cpu', compute_type='int8')" >/dev/null 2>&1; then say whisper "ok (small.en)"; else say whisper "model download FAILED (re-run setup.sh)"; ok=0; fi
 else say python-env "MISSING: install Python 3.10+ (python.org) or uv (docs.astral.sh/uv)"; ok=0; fi
 chmod +x "$SKILL"/scripts/*.sh "$SKILL"/scripts/py 2>/dev/null
