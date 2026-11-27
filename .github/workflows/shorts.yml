@@ -129,7 +129,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODE="${{ inputs.mode }}"
           elif [ "${{ github.event.schedule }}" = "30 6 * * *" ]; then
-            MODE="dark-mythology-history"
+            MODE="spooky-stick-story"
           else
             MODE="stick-story"
           fi
