@@ -18,7 +18,7 @@ STEPS
 `work/<slug>/script.json` — valid JSON with exactly these keys:
 - All numeric fields MUST be JSON numbers, never strings (for example `0.42`, not `"0.42"`).
 - `title`: unique hook-style title, max 100 chars.
-- `voice`: `am_onyx`
+- `voice`: `edge:en-US-GuyNeural`
 - `speed`: `0.95` (low, calm delivery)
 - `lead`: `0.35`, `outro`: `1.0`, `gap`: `0.42`, `music`: `tension`
 - `sources`: array of exactly 2 strings, each `Publisher, "Title" (what it supports) https://full-url`
@@ -41,7 +41,7 @@ Visual direction (the deterministic shots use it; do not describe shots in the s
 - Quiet one-light 3D places: mounds, temples, markets and fields at night.
 - A single red-glowing subject; other people stay terracotta silhouettes.
 - Parchment maps and gold date ribbons, crimson string and case-file inserts, typewriter captions.
-- Slow, soft cues and a low calm `am_onyx` x0.95 voice over `music: tension`.
+- Slow, soft cues and a low calm `edge:en-US-GuyNeural` x1.0 voice over `music: tension`.
 - No gore, no real living-person accusations; every claim attributed to what records or legends say.
 
 Count check: 10 lines = 10 `visual_labels` = 10 shots. Original writing only. Stop after writing; the workflow handles everything else.

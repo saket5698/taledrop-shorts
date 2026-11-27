@@ -37,6 +37,9 @@ GOOD = {
     # Azure needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION; best prose, needs network.
     'az:hi-IN-ArjunNeural': 'Hindi male, Azure neural', 'az:hi-IN-AaravNeural': 'Hindi male, Azure neural',
     'az:hi-IN-KavyaNeural': 'Hindi female, Azure neural', 'az:hi-IN-AnanyaNeural': 'Hindi female, Azure neural',
+    # Edge TTS (free, no key, needs network): best for English shorts on CI.
+    'edge:en-US-GuyNeural': 'English male, steady (default for English)', 'edge:en-US-DavisNeural': 'English male, calm',
+    'edge:en-US-AriaNeural': 'English female, warm', 'edge:en-US-JennyNeural': 'English female, friendly',
 }
 SR = 24000
 PIPER_DIR = Path(os.environ.get('FACELESS_HOME') or HOME) / 'piper-hi'
@@ -89,6 +92,26 @@ def piper_say(voice, text, speed):
     buf.seek(0)
     sr, data = wavfile.read(buf)
     return resample(np.asarray(data, dtype=np.float64) / 32768.0, sr)
+
+
+def edge_say(voice, text, speed):
+    """Edge TTS (free, no key, needs network). Returns 24 kHz float64 samples."""
+    import io, os, subprocess, tempfile
+    name = voice[5:]
+    rate = f"{int(round((speed - 1) * 100)):+d}%"
+    tmp_mp3 = tempfile.mktemp(suffix='.mp3')
+    tmp_wav = tempfile.mktemp(suffix='.wav')
+    try:
+        import edge_tts
+        edge_tts.Communicate(text, name, rate=rate).save_sync(tmp_mp3)
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', tmp_mp3, '-ac', '1', '-ar', str(SR), tmp_wav],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        sr, data = wavfile.read(tmp_wav)
+        return resample(np.asarray(data, dtype=np.float64) / 32768.0, sr)
+    finally:
+        for p in (tmp_mp3, tmp_wav):
+            try: os.remove(p)
+            except OSError: pass
 
 
 def azure_say(voice, text, speed):
@@ -145,15 +168,17 @@ def main():
         for k, v in GOOD.items(): print(f'{k:12s} {v}')
         return
     if not a.project: ap.error('project folder missing')
-    P = Path(a.project); S = json.loads((P / 'script.json').read_text(encoding='utf-8'))
+    P = Path(a.project); S = json.loads((P / 'script.json').read_text(encoding='utf-8-sig'))
     voice = a.voice or S.get('voice', 'am_michael'); speed = float(a.speed or S.get('speed', 1.0))
     if a.download:
-        if not (voice.startswith('hi-') or voice.startswith('az:')): ensure_models()
+        if not (voice.startswith('hi-') or voice.startswith('az:') or voice.startswith('edge:')): ensure_models()
         return
     if voice.startswith('hi-'):
         say = lambda text: trim(piper_say(voice, text, speed))
     elif voice.startswith('az:'):
         say = lambda text: trim(azure_say(voice, text, speed))
+    elif voice.startswith('edge:'):
+        say = lambda text: trim(edge_say(voice, text, speed))
     else:
         ensure_models()
         from kokoro_onnx import Kokoro
