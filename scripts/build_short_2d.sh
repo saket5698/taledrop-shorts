@@ -38,7 +38,13 @@ MP4="$PROJ/renders/$SLUG.mp4"
 [ -s "$MP4" ] || { echo "render missing" >&2; exit 2; }
 
 echo "==> publish"
-TITLE=$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["title"])' "$PROJ/publish.json")
-DESC=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(d.get("description",""))' "$PROJ/publish.json")
-TAGS=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(",".join(d.get("tags",["hindi","kahani","mythology","kathasutra"])))' "$PROJ/publish.json")
-"$PY" "$ROOT/scripts/publish.py" --project "$PROJ" --mode hindi-mythology-2d --lang hi
+if [ "${SKIP_PUBLISH:-0}" = "1" ]; then
+  echo "SKIP_PUBLISH=1 (no channel token yet, or review-only run): MP4 kept in renders/ and uploaded as a QA artifact"
+else
+  COVER_TIME="$(jq -r '.cover_time // 1.8' "$PROJ/publish.json" 2>/dev/null || echo 1.8)"
+  ffmpeg -v error -y -ss "$COVER_TIME" -i "$MP4" -frames:v 1 -q:v 2 "$PROJ/review/cover.jpg"
+  TITLE=$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["title"])' "$PROJ/publish.json")
+  DESC=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(d.get("description",""))' "$PROJ/publish.json")
+  TAGS=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(",".join(d.get("tags",["hindi","kahani","mythology","kathasutra"])))' "$PROJ/publish.json")
+  "$PY" "$ROOT/scripts/publish.py" --project "$PROJ" --mode hindi-mythology-2d --lang hi
+fi
